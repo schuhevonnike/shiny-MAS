@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 from environments.pettingzoo_env import PettingZooEnv, make_env1, make_env2
-from algorithms01.dqn import DQN as DQN_online
+from algorithms01.dqn import DQN as DQN_01
 from algorithms01.ppo import PPO as PPO_online
 from algorithms01.maddpg import MADDPG as MADDPG_online
 from algorithms01.sac import SAC as SAC_online
@@ -57,7 +57,7 @@ def run_experiment(env_name, algorithm, individual, source, device, num_envs):
 
         if source == 'online':
             if algorithm == 'DQN':
-                agents[agent_id] = DQN_online(state_dim, action_dim, device)
+                agents[agent_id] = DQN_01(state_dim, action_dim, device)
             elif algorithm == 'PPO':
                 agents[agent_id] = PPO_online(state_dim, action_dim, device)
             elif algorithm == 'MADDPG':
@@ -79,10 +79,9 @@ def run_experiment(env_name, algorithm, individual, source, device, num_envs):
                 raise ValueError(f"Unknown algorithm: {algorithm}")
 
     # Training phase
-    train(env, agents, algorithm, source, num_episodes=1000)
-
+    train(env, agents, 1000)
     # Evaluation phase
-    mean_reward, std_reward = evaluate(env, agents, num_episodes=100)
+    mean_reward, std_reward = evaluate(env, agents, 1000)
     print(f"Mean reward: {mean_reward}, Std reward: {std_reward}")
 
     return env, mean_reward, std_reward

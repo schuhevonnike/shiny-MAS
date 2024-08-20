@@ -28,28 +28,27 @@ class DQN:
         self.gamma = 0.99
         self.epsilon = 0.1
 
-        def select_action(self, state, evaluation=False):
-            if not evaluation and random.random() < self.epsilon:
-                return np.random.randint(self.action_dim)
-            state = torch.FloatTensor(state).unsqueeze(0).to(device)
-            with torch.no_grad():
-                return self.q_network(state).argmax().item()
+    def select_action(self, state, evaluation=False):
+        if not evaluation and random.random() < self.epsilon:
+            return np.random.randint(self.action_dim)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            return self.q_network(state).argmax().item()
 
-        def update(self, state, action, reward, next_state, done):
-            self.replay_buffer.append((state, action, reward, next_state, done))
-            if len(self.replay_buffer) < 1000:
-                return
-            if len(self.replay_buffer) > 10000:
-                self.replay_buffer.pop(0)
+    def update(self, state, action, reward, next_state, done):
+        self.replay_buffer.append((state, action, reward, next_state, done))
+        if len(self.replay_buffer) < 1000:
+            return
+        if len(self.replay_buffer) > 10000:
+            self.replay_buffer.pop(0)
 
             batch = random.sample(self.replay_buffer, 64)
             state, action, reward, next_state, done = zip(*batch)
-
-            state = torch.FloatTensor(state).to(device)
-            action = torch.LongTensor(action).to(device)
-            reward = torch.FloatTensor(reward).to(device)
-            next_state = torch.FloatTensor(next_state).to(device)
-            done = torch.FloatTensor(done).to(device)
+            state = torch.FloatTensor(state).to(self.device)
+            action = torch.LongTensor(action).to(self.device)
+            reward = torch.FloatTensor(reward).to(self.device)
+            next_state = torch.FloatTensor(next_state).to(self.device)
+            done = torch.FloatTensor(done).to(self.device)
 
             q_values = self.q_network(state).gather(1, action.unsqueeze(1)).squeeze(1)
             with torch.no_grad():

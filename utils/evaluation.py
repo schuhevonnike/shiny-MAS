@@ -1,8 +1,8 @@
 import numpy as np 
 
-def evaluate(env, agents, episodes=100, cooperative=False):
+def evaluate(env, agents, num_episodes, cooperative=False):
     rewards = []
-    for episode in range(episodes):
+    for episode in range(num_episodes):
         state = env.reset()
         done = {agent: False for agent in env.agents}
         total_rewards = {agent: 0 for agent in env.agents}

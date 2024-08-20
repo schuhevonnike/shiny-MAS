@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch.optim import Adam
 
-def train(env, agents, num_episodes=1000, learning_rate=0.001, cooperative=False):
-    optimizers = [Adam(agent.parameters(), lr=learning_rate) for agent in agents]
+def train(env, agents, num_episodes, learning_rate=0.001, cooperative=False):
+    #optimizers = [Adam(agent.parameters(), lr=learning_rate) for agent in agents]
     for episode in range(num_episodes):
         state = env.reset()
         done = {agent: False for agent in env.agents}

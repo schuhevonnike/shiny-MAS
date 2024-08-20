@@ -3,7 +3,7 @@ import numpy as np
 from gym.spaces import Box
 from pettingzoo.utils import wrappers
 from pettingzoo.classic import rps_v2
-from pettingzoo.mpe import simple_tag_v2
+from pettingzoo.mpe import simple_tag_v3
 import argparse
 
 class PettingZooEnv(gym.Env):
@@ -110,9 +110,9 @@ class PettingZooParallelWrapper(wrappers.BaseParallelWrapper):
 def make_env1(individual=True, num_envs=1):
     def env_fn():
         if individual:
-            return simple_tag_v2.parallel_env()
+            return simple_tag_v3.parallel_env()
         else:
-            return simple_tag_v2.parallel_env(max_cycles=50)
+            return simple_tag_v3.parallel_env(max_cycles=50)
 
     return PettingZooParallelWrapper(env_fn, num_envs)
 
