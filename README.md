@@ -6,7 +6,7 @@
 
 ## Project Structure
 
-'''
+\```
 shiny-MAS-main/
 │
 ├── main.py                      # Entry point of the application
@@ -41,7 +41,7 @@ shiny-MAS-main/
     ├── evaluation.py            # Evaluation functions for trained models
     ├── metrics.py               # Performance metrics for analysis, e.g. convergence rate, success rate, mean value and standard deviation of rewards
     └── training.py              # Training loops and functions
-'''
+\```
 
 ## Getting Started
 
