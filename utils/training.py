@@ -13,9 +13,9 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
             actions = {}
             for agent in env.agents:
                 if agent in adversary_agents:
-                    actions[agent] += adversary_agents[agent].select_action(state[agent])
+                    actions[agent] = adversary_agents[agent].select_action(state[agent])
                 elif agent in cooperator_agents:
-                    actions[agent] += cooperator_agents[agent].select_action(state[agent])
+                    actions[agent] = cooperator_agents[agent].select_action(state[agent])
             obs, rewards, done, infos = env.step(actions)
 
             for agent in env.agents:

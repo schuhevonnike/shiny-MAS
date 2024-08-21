@@ -1,5 +1,7 @@
 import torch
 import pandas as pd
+from rlcard.games.doudizhu.utils import action
+
 from environments.pettingzoo_env import PettingZooEnv, make_env1, make_env2
 from algorithms01.dqn import DQNAdversary as DQNAdversary_01, DQNCooperator as DQNCooperator_01
 from algorithms01.ppo import PPOAdversary as PPOAdversary_01, PPOCooperator as PPOCooperator_01
@@ -54,8 +56,10 @@ def run_experiment(env_name, algorithm, num_envs):
 
         if 'adversary' in agent_id:
             agent_type = 'adversary'
+            adversary_agents[agent_id] = PettingZooEnv.step(action)
         else:
             agent_type = 'cooperator'
+            cooperator_agents[agent_id] = PettingZooEnv.step(action)
 
         agents = adversary_agents if agent_type == 'adversary' else cooperator_agents
 
