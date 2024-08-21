@@ -68,7 +68,7 @@ shiny-MAS-main/
 To run the main application, execute the `main.py` file:
 
 ```bash
-python main.py
+python main.py [--num_envs <desired number of environments>] ; [optional argument]
 ```
 
 This will start the training or evaluation process as configured.
