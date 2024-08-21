@@ -98,8 +98,8 @@ class PettingZooParallelWrapper(wrappers.BaseParallelWrapper):
 
     def step(self, actions):
         results = [env.step(action) for env, action in zip(self.envs, actions)]
-        obs, rewards, dones, infos = zip(*results)
-        return list(obs), list(rewards), list(dones), list(infos)
+        obs, rewards, done, infos = zip(*results)
+        return list(obs), list(rewards), list(done), list(infos)
 
     def action_space(self, agent):
         return self._action_spaces[agent]

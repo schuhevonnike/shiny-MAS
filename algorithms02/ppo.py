@@ -27,7 +27,7 @@ class ValueNetwork(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
-class PPO:
+class PPOAdversary:
     def __init__(self, state_dim, action_dim, device, learning_rate=0.0003, gamma=0.99, epsilon=0.2, batch_size=64):
         self.device = device
         self.policy_net = PolicyNetwork(state_dim, action_dim).to(device)
@@ -38,58 +38,125 @@ class PPO:
         self.batch_size = batch_size
         self.replay_buffer = []
 
-        def select_action(self, state):
-            state = torch.FloatTensor(state).unsqueeze(0).to(device)
-            with torch.no_grad():
-                action_probs = self.policy_net(state)
-            action = np.random.choice(len(action_probs.cpu().numpy()[0]), p=action_probs.cpu().numpy()[0])
-            return action
+    def select_action(self, state):
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            action_prob = self.policy_net(state)
+        action = np.random.choice(len(action_prob.cpu().numpy()[0]), p=action_prob.cpu().numpy()[0])
+        return action
 
-        def store_transition(self, transition):
-            self.replay_buffer.append(transition)
+    def store_transition(self, transition):
+        self.replay_buffer.append(transition)
 
-        def update(self):
-            if len(self.replay_buffer) < self.batch_size:
-                return
+    def update(self):
+        if len(self.replay_buffer) < self.batch_size:
+            return
 
-            states, actions, rewards, next_states, dones = zip(*self.replay_buffer)
-            states = torch.FloatTensor(states).to(device)
-            actions = torch.LongTensor(actions).to(device)
-            rewards = torch.FloatTensor(rewards).to(device)
-            next_states = torch.FloatTensor(next_states).to(device)
-            dones = torch.FloatTensor(dones).to(device)
+        states, actions, rewards, next_states, done = zip(*self.replay_buffer)
+        states = torch.FloatTensor(states).to(self.device)
+        actions = torch.LongTensor(actions).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
+        next_states = torch.FloatTensor(next_states).to(self.device)
+        done = torch.FloatTensor(done).to(self.device)
 
-            old_action_probs = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-            returns = self.compute_returns(rewards, dones, next_states)
-            advantages = returns - self.value_net(states).squeeze(1)
+        old_action_prob = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        returns = self.compute_returns(rewards, done, next_states)
+        advantages = returns - self.value_net(states).squeeze(1)
 
-            for _ in range(10):  # multiple updates per batch
-                new_action_probs = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-                ratios = new_action_probs / old_action_probs
-                surr1 = ratios * advantages
-                surr2 = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon) * advantages
-                policy_loss = -torch.min(surr1, surr2).mean()
-                value_loss = nn.MSELoss()(self.value_net(states).squeeze(1), returns)
-                
-                self.optimizer.zero_grad()
-                (policy_loss + value_loss).backward()
-                self.optimizer.step()
+        for _ in range(10):
+            new_action_prob = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            ratios = new_action_prob / old_action_prob
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon) * advantages
+            policy_loss = -torch.min(surr1, surr2).mean()
+            value_loss = nn.MSELoss()(self.value_net(states).squeeze(1), returns)
 
-            self.replay_buffer = []
+            self.optimizer.zero_grad()
+            (policy_loss + value_loss).backward()
+            self.optimizer.step()
 
-        def compute_returns(self, rewards, dones, next_states):
-            returns = []
-            G = 0
-            for reward, done, next_state in zip(reversed(rewards), reversed(dones), reversed(next_states)):
-                if done:
-                    G = 0
-                G = reward + self.gamma * G
-                returns.insert(0, G)
-            returns = torch.FloatTensor(returns).to(device)
-            return returns
+        self.replay_buffer = []
 
-        def save(self, filename):
-            torch.save(self.policy_net.state_dict(), filename)
+    def compute_returns(self, rewards, done, next_states):
+        returns = []
+        G = 0
+        for reward, done, next_state in zip(reversed(rewards), reversed(done), reversed(next_states)):
+            if done:
+                G = 0
+            G = reward + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.FloatTensor(returns).to(self.device)
+        return returns
 
-        def load(self, filename):
-            self.policy_net.load_state_dict(torch.load(filename))
+    def save(self, filename):
+        torch.save(self.policy_net.state_dict(), filename)
+
+    def load(self, filename):
+        self.policy_net.load_state_dict(torch.load(filename))
+
+class PPOCooperator:
+    def __init__(self, state_dim, action_dim, device, learning_rate=0.0003, gamma=0.99, epsilon=0.2, batch_size=64):
+        self.device = device
+        self.policy_net = PolicyNetwork(state_dim, action_dim).to(device)
+        self.value_net = ValueNetwork(state_dim).to(device)
+        self.optimizer = optim.Adam(list(self.policy_net.parameters()) + list(self.value_net.parameters()), lr=learning_rate)
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.batch_size = batch_size
+        self.replay_buffer = []
+
+    def select_action(self, state):
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            action_prob = self.policy_net(state)
+        action = np.random.choice(len(action_prob.cpu().numpy()[0]), p=action_prob.cpu().numpy()[0])
+        return action
+
+    def store_transition(self, transition):
+        self.replay_buffer.append(transition)
+
+    def update(self):
+        if len(self.replay_buffer) < self.batch_size:
+            return
+
+        states, actions, rewards, next_states, done = zip(*self.replay_buffer)
+        states = torch.FloatTensor(states).to(self.device)
+        actions = torch.LongTensor(actions).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
+        next_states = torch.FloatTensor(next_states).to(self.device)
+        done = torch.FloatTensor(done).to(self.device)
+
+        old_action_prob = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        returns = self.compute_returns(rewards, done, next_states)
+        advantages = returns - self.value_net(states).squeeze(1)
+
+        for _ in range(10):
+            new_action_prob = self.policy_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+            ratios = new_action_prob / old_action_prob
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon) * advantages
+            policy_loss = -torch.min(surr1, surr2).mean()
+            value_loss = nn.MSELoss()(self.value_net(states).squeeze(1), returns)
+
+            self.optimizer.zero_grad()
+            (policy_loss + value_loss).backward()
+            self.optimizer.step()
+
+        self.replay_buffer = []
+
+    def compute_returns(self, rewards, done, next_states):
+        returns = []
+        G = 0
+        for reward, done, next_state in zip(reversed(rewards), reversed(done), reversed(next_states)):
+            if done:
+                G = 0
+            G = reward + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.FloatTensor(returns).to(self.device)
+        return returns
+
+    def save(self, filename):
+        torch.save(self.policy_net.state_dict(), filename)
+
+    def load(self, filename):
+        self.policy_net.load_state_dict(torch.load(filename))
