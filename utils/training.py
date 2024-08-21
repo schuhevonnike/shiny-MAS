@@ -27,10 +27,10 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
             # Update agents based on the results of the step
             for agent in env.agents:
                 if agent in adversary_agents and not done[agent]:
-                    adversary_agents[agent].update(state[0][0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
+                    adversary_agents[agent].update(state[0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     adversary_rewards[agent] += rewards[agent]
                 elif agent in cooperator_agents and not done[agent]:
-                    cooperator_agents[agent].update(state[0][0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
+                    cooperator_agents[agent].update(state[0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     cooperator_rewards[agent] += rewards[agent]
             # After the loop completes, return the final observations, rewards, done flags, and infos
             return list(obs), list(rewards), list(done), infos
