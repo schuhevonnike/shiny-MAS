@@ -13,17 +13,17 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
             actions = {}
             for agent in env.agents:
                 if agent in adversary_agents:
-                    actions[agent] = adversary_agents[agent].select_action(state[agent])
+                    actions[agent] = adversary_agents[agent].select_action(state[0][agent])
                 elif agent in cooperator_agents:
-                    actions[agent] = cooperator_agents[agent].select_action(state[agent])
+                    actions[agent] = cooperator_agents[agent].select_action(state[0][agent])
             obs, rewards, done, infos = env.step(actions)
 
             for agent in env.agents:
                 if agent in adversary_agents and not done[agent]:
-                    adversary_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
+                    adversary_agents[agent].update(state[0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     adversary_rewards[agent] += rewards[agent]
                 elif agent in cooperator_agents and not done[agent]:
-                    cooperator_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
+                    cooperator_agents[agent].update(state[0][agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     cooperator_rewards[agent] += rewards[agent]
             assert isinstance(infos, object)
             return list(obs), list(rewards), list(done), infos

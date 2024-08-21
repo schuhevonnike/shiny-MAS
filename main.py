@@ -27,7 +27,7 @@ sources = ['01', '02']
 # Cuda cores are better suited for such tasks, so ideally, we want to run the program on a cuda. If not possible, use the standard CPU.
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-def run_experiment(env_name, algorithm, num_envs):
+def run_experiment(env_name, algorithm, num_envs, source):
     if env_name == 'make_env1':
         env = make_env1(num_envs=num_envs)
     elif env_name == 'make_env2':
@@ -56,14 +56,12 @@ def run_experiment(env_name, algorithm, num_envs):
 
         if 'adversary' in agent_id:
             agent_type = 'adversary'
-            adversary_agents[agent_id] = PettingZooEnv.step(action)
         else:
             agent_type = 'cooperator'
-            cooperator_agents[agent_id] = PettingZooEnv.step(action)
 
         agents = adversary_agents if agent_type == 'adversary' else cooperator_agents
 
-        if source == 'online':
+        if source == '01':
             if algorithm == 'DQN':
                 agents[agent_id] = DQNAdversary_01(state_dim, action_dim, device) if agent_type == 'adversary' else DQNCooperator_01(state_dim, action_dim, device)
             elif algorithm == 'PPO':
@@ -72,7 +70,7 @@ def run_experiment(env_name, algorithm, num_envs):
                 agents[agent_id] = MADDPGAdversary_01(state_dim, action_dim, device) if agent_type == 'adversary' else MADDPGCooperator_01(state_dim, action_dim, device)
             else:
                 agents[agent_id] = SAC_01(state_dim, action_dim, device)
-        elif source == 'own':
+        elif source == '02':
             if algorithm == 'DQN':
                 agents[agent_id] = DQNAdversary_02(state_dim, action_dim, device) if agent_type == 'adversary' else DQNCooperator_02(state_dim, action_dim, device)
             elif algorithm == 'PPO':
@@ -101,14 +99,14 @@ if __name__ == "__main__":
 
     # Running experiments for each combination of algorithm, setting, and source
     for source in sources:
-        for type in agent_types:
+        for setting in agent_types:
             # Initialize empty array for storing the results
             results = []
             for algo in algorithms:
                 individual = (agent_types == 'adversary')
                 cooperative = (agent_types == 'cooperator')
                 for env_name in env_names:
-                    env, mean_reward, std_reward = run_experiment(env_name, algo, num_envs=args.num_envs)
+                    env, mean_reward, std_reward = run_experiment(env_name, algo, num_envs=args.num_envs, source=source)
                     results.append({'environment': env_name, 'algorithm': algo, 'setting': agent_types, 'source': source, 'mean_reward': mean_reward, 'std_reward': std_reward})
             # Saving the results to a CSV file for each setting and source
             filename = f'results/comparison_results_{source}_{agent_types}.csv'
