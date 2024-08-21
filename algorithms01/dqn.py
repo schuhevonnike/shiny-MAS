@@ -48,7 +48,8 @@ class DQNAdversary(nn.Module):
             state = np.array(state.tolist(), dtype=np.float32)
             return state
 
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        # Folgende Zeile schmeißt nen Error:
+        #state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         if random.random() < self.epsilon:
             action = np.random.uniform(-1, 1, size=self.actor.fc3.out_features)
         else:
