@@ -38,4 +38,5 @@ def evaluate(env, adversary_agents, cooperator_agents, num_episodes):
     print(f"Adversary Mean Reward: {adversary_mean_reward}, Adversary Std Reward: {adversary_std_reward}")
     print(f"Cooperator Mean Reward: {cooperator_mean_reward}, Cooperator Std Reward: {cooperator_std_reward}")
 
-    return adversary_mean_reward, adversary_std_reward, cooperator_mean_reward, cooperator_std_reward
+    # Return both adversary and cooperator rewards for further analysis
+    return calculate_metrics(adversary_rewards, cooperator_rewards)

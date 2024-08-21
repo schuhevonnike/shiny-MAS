@@ -1,12 +1,12 @@
 import torch
 import pandas as pd
 from environments.pettingzoo_env import PettingZooEnv, make_env1, make_env2
-from algorithms01.dqn import DQNAdversary, DQNCooperator
-from algorithms01.ppo import PPO as PPO_01
-from algorithms01.maddpg import MADDPG as MADDPG_01
+from algorithms01.dqn import DQNAdversary as DQNAdversary_01, DQNCooperator as DQNCooperator_01
+from algorithms01.ppo import PPOAdversary as PPOAdversary_01, PPOCooperator as PPOCooperator_01
+from algorithms01.maddpg import MADDPGAdversary as MADDPGAdversary_01, MADDPGCooperator as MADDPGCooperator_01
 from algorithms01.sac import SAC as SAC_01
-from algorithms02.dqn import DQN as DQN_02
-from algorithms02.ppo import PPO as PPO_02
+from algorithms02.dqn import DQNAdversary as DQNAdversary_02, DQNCooperator as DQNCooperator_02
+from algorithms02.ppo import PPOAdversary as PPOAdversary_02, PPOCooperator as PPOCooperator_02
 from algorithms02.maddpg import MADDPG as MADDPG_02
 from algorithms02.sac import SAC as SAC_02
 from utils.training import train
@@ -63,18 +63,18 @@ def run_experiment(env_name, algorithm, num_envs):
 
         if source == 'online':
             if algorithm == 'DQN':
-                agents[agent_id] = DQN_01(state_dim, action_dim, device)
+                agents[agent_id] = DQNAdversary_01(state_dim, action_dim, device) if agent_type == 'adversary' else DQNCooperator_01(state_dim, action_dim, device)
             elif algorithm == 'PPO':
-                agents[agent_id] = PPO_01(state_dim, action_dim, device)
+                agents[agent_id] = PPOAdversary_01(state_dim, action_dim, device) if agent_type == 'adversary' else PPOCooperator_01(state_dim, action_dim, device)
             elif algorithm == 'MADDPG':
-                agents[agent_id] = MADDPG_01(state_dim, action_dim, device)
+                agents[agent_id] = MADDPGAdversary_01(state_dim, action_dim, device) if agent_type == 'adversary' else MADDPGCooperator_01(state_dim, action_dim, device)
             else:
                 agents[agent_id] = SAC_01(state_dim, action_dim, device)
         elif source == 'own':
             if algorithm == 'DQN':
-                agents[agent_id] = DQN_02(state_dim, action_dim, device)
+                agents[agent_id] = DQNAdversary_02(state_dim, action_dim, device) if agent_type == 'adversary' else DQNCooperator_02(state_dim, action_dim, device)
             elif algorithm == 'PPO':
-                agents[agent_id] = PPO_02(state_dim, action_dim, device)
+                agents[agent_id] = PPOAdversary_02(state_dim, action_dim, device) if agent_type == 'adversary' else PPOCooperator_02(state_dim, action_dim, device)
             elif algorithm == 'MADDPG':
                 agents[agent_id] = MADDPG_02(state_dim, action_dim, device)
             else:

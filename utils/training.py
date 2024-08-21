@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from sympy import false
 from torch.optim import Adam
 
 def train(env, adversary_agents, cooperator_agents, num_episodes):
@@ -18,15 +17,16 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
                 elif agent in cooperator_agents:
                     actions[agent] = cooperator_agents[agent].select_action(state[agent])
 
-            next_state, rewards, done, _ = env.step(actions)
+            obs, rewards, done, infos = env.step(actions)
             for agent in env.agents:
                 if agent in adversary_agents and not done[agent]:
-                    adversary_agents[agent].update(state[agent], actions[agent], rewards[agent], next_state[agent], done[agent])
+                    adversary_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     adversary_rewards[agent] += rewards[agent]
                 elif agent in cooperator_agents and not done[agent]:
-                    cooperator_agents[agent].update(state[agent], actions[agent], rewards[agent], next_state[agent], done[agent])
+                    cooperator_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     cooperator_rewards[agent] += rewards[agent]
-
+            assert isinstance(infos, object)
+            return list(obs), list(rewards), list(done), list(infos)
         adversary_total_reward = sum(adversary_rewards.values())
         cooperator_total_reward = sum(cooperator_rewards.values())
         print(f"Episode {episode + 1} - Adversary Total Reward: {adversary_total_reward}, Cooperator Total Reward: {cooperator_total_reward}")

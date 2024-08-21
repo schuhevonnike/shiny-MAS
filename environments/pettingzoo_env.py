@@ -30,10 +30,10 @@ class PettingZooEnv(gym.Env):
         # Take a step in the environment.
         # Returns converted observation, reward, done flag, and info dict.
         agent = self._agent_selector
-        obs, reward, done, info = self.env.step(action, agent)
+        obs, rewards, done, info = self.env.step(action, agent)
         self.agent_done[agent] = done
         self._env_done = all(self.agent_done.values())
-        return self._convert_obs(obs), self._convert_reward(reward), self._convert_done(done), info
+        return self._convert_obs(obs), self._convert_reward(rewards), self._convert_done(done), info
 
     def _convert_obs(self, obs):
         # Convert observation to a dict with agent index as key
