@@ -26,14 +26,21 @@ class PettingZooEnv(gym.Env):
         self.agent_done = {agent: False for agent in self.possible_agents}
         return self._convert_obs(obs)
 
-    def step(self, action):    
+    def step(self, action):
         # Take a step in the environment.
         # Returns converted observation, reward, done flag, and info dict.
         agent = self._agent_selector
-        obs, rewards, done, info = self.env.step(action, agent)
+        if agent not in self.possible_agents:
+            raise ValueError(f"Agent {agent} not found in possible agents {self.possible_agents}")
+
+        result = self.env.step(action, agent)
+        if not isinstance(result, tuple) or len(result) != 4:
+            raise ValueError(f"Invalid step result: {result}. Expected a tuple of (obs, reward, done, info).")
+
+        obs, reward, done, info = result
         self.agent_done[agent] = done
         self._env_done = all(self.agent_done.values())
-        return self._convert_obs(obs), self._convert_reward(rewards), self._convert_done(done), info
+        return self._convert_obs(obs), self._convert_reward(reward), self._convert_done(done), info
 
     def _convert_obs(self, obs):
         # Convert observation to a dict with agent index as key

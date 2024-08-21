@@ -37,8 +37,6 @@ def run_experiment(env_name, algorithm, num_envs):
     adversary_agents = {}
     cooperator_agents = {}
 
-    agents = {}  # Initialize the agents dictionary
-
     # Iterate over all agents to get action and observation spaces
     for agent_id in env.envs[0].possible_agents:
         action_space = env.action_space(agent_id)
