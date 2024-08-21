@@ -31,8 +31,9 @@ class CriticNetworkBase(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
-class MADDPGAdversary:
-    def __init__(self, state_dim, action_dim, n_agents, max_action, device, learning_rate=0.0003, gamma=0.99, tau=0.005):
+class MADDPGBase(nn.Module):
+    def __init__(self, state_dim, action_dim, n_agents, max_action, device, learning_rate=1e-3, gamma=0.99, tau=0.005):
+        super(MADDPGBase, self).__init__()
         self.device = device
         self.actors = [ActorNetworkBase(state_dim, action_dim, max_action).to(device) for _ in range(n_agents)]
         self.critics = [CriticNetworkBase(state_dim, action_dim, n_agents).to(device) for _ in range(n_agents)]
@@ -48,11 +49,14 @@ class MADDPGAdversary:
         self.n_agents = n_agents
         self.replay_buffer = deque(maxlen=100000)
 
-    def select_action(self, state, agent_idx):
+    def select_action(self, state, agent_idx, epsilon=0.1):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            action = self.actors[agent_idx](state)
-        return action.cpu().numpy()[0]
+        if random.random() < epsilon:
+            action = np.random.uniform(-1, 1, size=self.actors[agent_idx].fc3.out_features)
+        else:
+            with torch.no_grad():
+                action = self.actors[agent_idx](state).cpu().numpy()[0]
+        return action
 
     def store_transition(self, states, actions, rewards, next_states, done):
         self.replay_buffer.append((states, actions, rewards, next_states, done))
@@ -101,72 +105,8 @@ class MADDPGAdversary:
     def load(self, filename, agent_idx):
         self.actors[agent_idx].load_state_dict(torch.load(filename))
 
-class MADDPGCooperator:
-    def __init__(self, state_dim, action_dim, n_agents, max_action, device, learning_rate=0.0003, gamma=0.99, tau=0.005):
-        self.device = device
-        self.actors = [ActorNetworkBase(state_dim, action_dim, max_action).to(device) for _ in range(n_agents)]
-        self.critics = [CriticNetworkBase(state_dim, action_dim, n_agents).to(device) for _ in range(n_agents)]
-        self.target_actors = [ActorNetworkBase(state_dim, action_dim, max_action).to(device) for _ in range(n_agents)]
-        self.target_critics = [CriticNetworkBase(state_dim, action_dim, n_agents).to(device) for _ in range(n_agents)]
-        for i in range(n_agents):
-            self.target_actors[i].load_state_dict(self.actors[i].state_dict())
-            self.target_critics[i].load_state_dict(self.critics[i].state_dict())
-        self.optimizers_actor = [optim.Adam(self.actors[i].parameters(), lr=learning_rate) for i in range(n_agents)]
-        self.optimizers_critic = [optim.Adam(self.critics[i].parameters(), lr=learning_rate) for i in range(n_agents)]
-        self.gamma = gamma
-        self.tau = tau
-        self.n_agents = n_agents
-        self.replay_buffer = deque(maxlen=100000)
+class MADDPGAdversary(MADDPGBase):
+    pass
 
-    def select_action(self, state, agent_idx):
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            action = self.actors[agent_idx](state)
-        return action.cpu().numpy()[0]
-
-    def store_transition(self, states, actions, rewards, next_states, done):
-        self.replay_buffer.append((states, actions, rewards, next_states, done))
-
-    def update(self):
-        if len(self.replay_buffer) < 64:
-            return
-
-        batch = random.sample(self.replay_buffer, 64)
-        states, actions, rewards, next_states, done = zip(*batch)
-
-        states = torch.FloatTensor(states).to(self.device)
-        actions = torch.FloatTensor(actions).to(self.device)
-        rewards = torch.FloatTensor(rewards).to(self.device)
-        next_states = torch.FloatTensor(next_states).to(self.device)
-        done = torch.FloatTensor(done).to(self.device)
-
-        for i in range(self.n_agents):
-            with torch.no_grad():
-                next_actions = torch.cat([self.target_actors[j](next_states[:, j, :]) for j in range(self.n_agents)], dim=1)
-                target_q_values = self.target_critics[i](next_states.view(next_states.size(0), -1), next_actions)
-                y = rewards[:, i] + self.gamma * target_q_values * (1 - done[:, i])
-
-            q_values = self.critics[i](states.view(states.size(0), -1), actions.view(actions.size(0), -1))
-            critic_loss = nn.MSELoss()(q_values, y)
-
-            self.optimizers_critic[i].zero_grad()
-            critic_loss.backward()
-            self.optimizers_critic[i].step()
-
-            actions_pred = torch.cat([self.actors[j](states[:, j, :]) if j == i else actions[:, j, :] for j in range(self.n_agents)], dim=1)
-            actor_loss = -self.critics[i](states.view(states.size(0), -1), actions_pred).mean()
-
-            self.optimizers_actor[i].zero_grad()
-            actor_loss.backward()
-            self.optimizers_actor[i].step()
-
-            for target_param, param in zip(self.target_critics[i].parameters(), self.critics[i].parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-            for target_param, param in zip(self.target_actors[i].parameters(), self.actors[i].parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-    def save(self, filename, agent_idx):
-        torch.save(self.actors[agent_idx].state_dict(), filename)
-
-    def load(self, filename, agent_idx):
-        self.actors[agent_idx].load_state_dict(torch.load(filename))
+class MADDPGCooperator(MADDPGBase):
+    pass
