@@ -1,4 +1,5 @@
 import numpy as np
+from metrics import calculate_metrics
 
 def evaluate(env, adversary_agents, cooperator_agents, num_episodes):
     adversary_rewards = []
@@ -30,13 +31,13 @@ def evaluate(env, adversary_agents, cooperator_agents, num_episodes):
         adversary_rewards.append(adversary_total_reward)
         cooperator_rewards.append(cooperator_total_reward)
 
-    adversary_mean_reward = np.mean(adversary_rewards)
-    adversary_std_reward = np.std(adversary_rewards)
-    cooperator_mean_reward = np.mean(cooperator_rewards)
-    cooperator_std_reward = np.std(cooperator_rewards)
+    adversary_mean_reward = calculate_metrics(adversary_rewards)
+    adversary_std_reward = calculate_metrics(adversary_rewards)
+    cooperator_mean_reward = calculate_metrics(cooperator_rewards)
+    cooperator_std_reward = calculate_metrics(cooperator_rewards)
 
     print(f"Adversary Mean Reward: {adversary_mean_reward}, Adversary Std Reward: {adversary_std_reward}")
     print(f"Cooperator Mean Reward: {cooperator_mean_reward}, Cooperator Std Reward: {cooperator_std_reward}")
 
     # Return both adversary and cooperator rewards for further analysis
-    return calculate_metrics(adversary_rewards, cooperator_rewards)
+    return adversary_mean_reward, adversary_std_reward, cooperator_mean_reward, cooperator_std_reward

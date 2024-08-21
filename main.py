@@ -82,6 +82,7 @@ def run_experiment(env_name, algorithm, num_envs):
     train(env, adversary_agents, cooperator_agents, 1000)
     # Evaluation phase
     mean_reward, std_reward = evaluate(env, adversary_agents, cooperator_agents, 1000)
+
     print(f"Mean reward: {mean_reward}, Std reward: {std_reward}")
 
     return env, mean_reward, std_reward
