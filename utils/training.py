@@ -13,11 +13,11 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
             actions = {}
             for agent in env.agents:
                 if agent in adversary_agents:
-                    actions[agent] = adversary_agents[agent].select_action(state[agent])
+                    actions[agent] += adversary_agents[agent].select_action(state[agent])
                 elif agent in cooperator_agents:
-                    actions[agent] = cooperator_agents[agent].select_action(state[agent])
-
+                    actions[agent] += cooperator_agents[agent].select_action(state[agent])
             obs, rewards, done, infos = env.step(actions)
+
             for agent in env.agents:
                 if agent in adversary_agents and not done[agent]:
                     adversary_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
@@ -26,7 +26,7 @@ def train(env, adversary_agents, cooperator_agents, num_episodes):
                     cooperator_agents[agent].update(state[agent], actions[agent], rewards[agent], obs[agent], done[agent])
                     cooperator_rewards[agent] += rewards[agent]
             assert isinstance(infos, object)
-            return list(obs), list(rewards), list(done), list(infos)
+            return list(obs), list(rewards), list(done), infos
         adversary_total_reward = sum(adversary_rewards.values())
         cooperator_total_reward = sum(cooperator_rewards.values())
         print(f"Episode {episode + 1} - Adversary Total Reward: {adversary_total_reward}, Cooperator Total Reward: {cooperator_total_reward}")

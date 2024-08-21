@@ -1,5 +1,5 @@
 import numpy as np
-from metrics import calculate_metrics
+from utils.metrics import calculate_metrics
 
 def evaluate(env, adversary_agents, cooperator_agents, num_episodes):
     adversary_rewards = []

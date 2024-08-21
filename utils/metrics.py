@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def calculate_metrics(adversary_rewards, cooperator_rewards):
     #Calculate mean and standard deviation of rewards for adversary and cooperator agents:
     adversary_mean_reward = np.mean(adversary_rewards) # float, mean of adversary rewards using the list of rewards for adversary agents

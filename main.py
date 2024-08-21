@@ -19,7 +19,7 @@ import argparse
 # Main experiment parameters
 env_names = ['make_env1', 'make_env2']  # Choose the environment to run
 algorithms = ['DQN', 'PPO', 'MADDPG', 'SAC']
-settings = ['individual', 'cooperative']
+agent_types = ['adversary', 'cooperator']
 sources = ['01', '02']
 
 # Cuda cores are better suited for such tasks, so ideally, we want to run the program on a cuda. If not possible, use the standard CPU.
@@ -97,16 +97,16 @@ if __name__ == "__main__":
 
     # Running experiments for each combination of algorithm, setting, and source
     for source in sources:
-        for setting in settings:
+        for type in agent_types:
             # Initialize empty array for storing the results
             results = []
             for algo in algorithms:
-                individual = (setting == 'individual')
-                cooperative = (setting == 'cooperative')
+                individual = (agent_types == 'adversary')
+                cooperative = (agent_types == 'cooperator')
                 for env_name in env_names:
                     env, mean_reward, std_reward = run_experiment(env_name, algo, num_envs=args.num_envs)
-                    results.append({'environment': env_name, 'algorithm': algo, 'setting': setting, 'source': source, 'mean_reward': mean_reward, 'std_reward': std_reward})
+                    results.append({'environment': env_name, 'algorithm': algo, 'setting': agent_types, 'source': source, 'mean_reward': mean_reward, 'std_reward': std_reward})
             # Saving the results to a CSV file for each setting and source
-            filename = f'results/comparison_results_{source}_{setting}.csv'
+            filename = f'results/comparison_results_{source}_{agent_types}.csv'
             results_df = pd.DataFrame(results)
             results_df.to_csv(filename, index=False)
