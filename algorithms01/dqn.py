@@ -6,7 +6,6 @@ import random
 from pettingzoo.utils import agent_selector
 from rlcard.games.doudizhu.utils import action
 
-
 class QNetworkBase(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(QNetworkBase, self).__init__()
@@ -35,17 +34,22 @@ class DQNAdversary(nn.Module):
         self.device = device
 
     def preprocess_state(self, state):
+        # Check if the state is a tuple
+        if isinstance(state, tuple):
+            # Use the first element of the tuple, which contains the actual state arrays
+            state = state[0]
+
         if isinstance(state, dict):
-            # Handle dictionary, flatten nested lists/arrays
+            # Flatten the dictionary values into a single list
             flat_state = []
-            for key, value in state.items():
+            for value in state.values():
                 if isinstance(value, (list, tuple, np.ndarray)):
                     flat_state.extend(value)
                 else:
                     flat_state.append(value)
             state = flat_state
 
-        # Ensure state is a numpy array with float32 type
+        # Convert to numpy array if needed
         if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
             state = np.array(state, dtype=np.float32)
 
@@ -111,17 +115,22 @@ class DQNCooperator(nn.Module):
         self.device = device
 
     def preprocess_state(self, state):
+        # Check if the state is a tuple
+        if isinstance(state, tuple):
+            # Use the first element of the tuple, which contains the actual state arrays
+            state = state[0]
+
         if isinstance(state, dict):
-            # Handle dictionary, flatten nested lists/arrays
+            # Flatten the dictionary values into a single list
             flat_state = []
-            for key, value in state.items():
+            for value in state.values():
                 if isinstance(value, (list, tuple, np.ndarray)):
                     flat_state.extend(value)
                 else:
                     flat_state.append(value)
             state = flat_state
 
-        # Ensure state is a numpy array with float32 type
+        # Convert to numpy array if needed
         if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
             state = np.array(state, dtype=np.float32)
 
