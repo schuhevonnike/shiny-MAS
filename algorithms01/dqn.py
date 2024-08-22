@@ -8,6 +8,7 @@ from pettingzoo.utils import agent_selector
 class QNetworkBase(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(QNetworkBase, self).__init__()
+        # Initialize input layers
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, 128)
         self.fc3 = nn.Linear(128, action_dim)
@@ -20,6 +21,7 @@ class QNetworkBase(nn.Module):
 class DQNAdversary(nn.Module):
     def __init__(self, state_dim, action_dim, device):
         super().__init__()
+        # Initialize adversary actors
         self.actor = QNetworkBase(state_dim, action_dim).to(device)
         self.target_q_network = QNetworkBase(state_dim, action_dim).to(device)
         self.optimizer = optim.Adam(self.actor.parameters(), lr=1e-3)
@@ -105,6 +107,7 @@ class DQNAdversary(nn.Module):
 class DQNCooperator(nn.Module):
     def __init__(self, state_dim, action_dim, device):
         super().__init__()
+        # Initialize cooperative actors
         self.actor = QNetworkBase(state_dim, action_dim).to(device)
         self.target_q_network = QNetworkBase(state_dim, action_dim).to(device)
         self.optimizer = optim.Adam(self.actor.parameters(), lr=1e-3)
