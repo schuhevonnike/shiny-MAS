@@ -36,24 +36,32 @@ class DQNAdversary(nn.Module):
 
     def preprocess_state(self, state):
         if isinstance(state, dict):
-            # Flatten the dictionary values into a single list
-            state = list(state.values())
-            state = [item for sublist in state for item in
-                     (sublist if isinstance(sublist, (list, tuple, np.ndarray)) else [sublist])]
+            # Handle dictionary, flatten nested lists/arrays
+            flat_state = []
+            for key, value in state.items():
+                if isinstance(value, (list, tuple, np.ndarray)):
+                    flat_state.extend(value)
+                else:
+                    flat_state.append(value)
+            state = flat_state
 
+        # Ensure state is a numpy array with float32 type
         if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
-            # Convert to a numpy array with float32 dtype
             state = np.array(state, dtype=np.float32)
+
         # Convert to a FloatTensor and move to the appropriate device
         return torch.FloatTensor(state).unsqueeze(0).to(self.device)
+
     def select_action(self, state, evaluation=False):
         print(f"State before preprocessing: {state}, type: {type(state)}")
         state = self.preprocess_state(state)
-        if not evaluation and random.random() < self.epsilon:
-            action =  np.random.randint(self.action_dim)
 
+        if not evaluation and random.random() < self.epsilon:
+            action = np.random.randint(self.action_dim)
+        else:
             with torch.no_grad():
-                return self.actor(state).cpu().numpy()[0]
+                action = self.actor(state).argmax(dim=1).item()
+        return action
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.append((state, action, reward, next_state, done))
@@ -104,25 +112,32 @@ class DQNCooperator(nn.Module):
 
     def preprocess_state(self, state):
         if isinstance(state, dict):
-            # Flatten the dictionary values into a single list
-            state = list(state.values())
-            state = [item for sublist in state for item in
-                     (sublist if isinstance(sublist, (list, tuple, np.ndarray)) else [sublist])]
+            # Handle dictionary, flatten nested lists/arrays
+            flat_state = []
+            for key, value in state.items():
+                if isinstance(value, (list, tuple, np.ndarray)):
+                    flat_state.extend(value)
+                else:
+                    flat_state.append(value)
+            state = flat_state
 
+        # Ensure state is a numpy array with float32 type
         if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
-            # Convert to a numpy array with float32 dtype
             state = np.array(state, dtype=np.float32)
 
         # Convert to a FloatTensor and move to the appropriate device
         return torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
     def select_action(self, state, evaluation=False):
+        print(f"State before preprocessing: {state}, type: {type(state)}")
         state = self.preprocess_state(state)
+
         if not evaluation and random.random() < self.epsilon:
             action = np.random.randint(self.action_dim)
-
+        else:
             with torch.no_grad():
-                return self.actor(state).cpu().numpy()[0]
+                action = self.actor(state).argmax(dim=1).item()
+        return action
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.append((state, action, reward, next_state, done))
