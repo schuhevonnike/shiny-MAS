@@ -1,10 +1,8 @@
 import gym
 import numpy as np
 from gym.spaces import Box
-from pettingzoo.utils import wrappers
-from pettingzoo.classic import rps_v2
+from pettingzoo.utils import wrappers, agent_selector
 from pettingzoo.mpe import simple_tag_v3
-import argparse
 
 class PettingZooEnv(gym.Env):
     # A wrapper class for PettingZoo environments to make them compatible with gym interface.
@@ -19,12 +17,13 @@ class PettingZooEnv(gym.Env):
         self.n_agents = len(self.possible_agents)
         self.agent_done = {agent: False for agent in self.possible_agents}
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         # Reset the environment and return the initial observation
-        obs = self.env.reset()
-        self._env_done = False
-        self.agent_done = {agent: False for agent in self.possible_agents}
-        return self._convert_obs(obs)
+        #obs = self.env.reset()
+        #self._env_done = False
+        #self.agent_done = {agent: False for agent in self.possible_agents}
+        #return self._convert_obs(obs)
+        pass
 
     def step(self, action):
         # Take a step in the environment.
@@ -66,82 +65,25 @@ class PettingZooEnv(gym.Env):
         # Set the seed for the environment
         self.env.seed(seed)
 
-class SimpleVecEnv:
-    # A simple vectorized environment that contains a single environment instance.
-    # This class mimics some of the functionality of stable_baselines3's DummyVecEnv.
-    def __init__(self, env_fn):
-        self.env = env_fn()
-        self.num_envs = 1  # Only one environment in this simple implementation
 
-    def reset(self):
-        # Reset the environment and return the initial observation
-        return self.env.reset()
+# From pettingzoo.farama.org: Usage of simple_tag_v3 in AEC environments (classic agent environment cycles)
+'''
+env = simple_tag_v3.env(render_mode="human")
+env.reset(seed=42)
 
-    def step(self, actions):
-        # Take a step in the environment.
-        # Expects a list of actions (even though we only have one environment).
-        return self.env.step(actions[0])
+for agent in env.agent_iter():
+    observation, reward, termination, truncation, info = env.last()
 
-    def render(self, mode='human'):
-        # Render the environment
-        return self.env.render(mode)
+    if termination or truncation:
+        action = None
+    else:
+        # this is where you would insert your policy
+        action = env.action_space(agent).sample()
 
-    def close(self):
-        # Close the environment
-        return self.env.close()
+    env.step(action)
+env.close()
+'''
 
-class PettingZooParallelWrapper(wrappers.BaseParallelWrapper):
-    def __init__(self, env_fn, num_envs):
-        self.envs = [env_fn() for _ in range(num_envs)]
-        super().__init__(self.envs[0])  # Initialize with a single env for metadata
-        self.num_envs = num_envs
-        
-        # Store action and observation spaces
-        self._action_spaces = {agent: self.envs[0].action_space(agent) for agent in self.envs[0].possible_agents}
-        self._observation_spaces = {agent: self.envs[0].observation_space(agent) for agent in self.envs[0].possible_agents}
-
-    def reset(self):
-        return [env.reset() for env in self.envs]
-
-    def step(self, actions):
-        results = [env.step(action) for env, action in zip(self.envs, actions)]
-        obs, rewards, done, infos = zip(*results)
-        return list(obs), list(rewards), list(done), list(infos)
-
-    def action_space(self, agent):
-        return self._action_spaces[agent]
-
-    def observation_space(self, agent):
-        return self._observation_spaces[agent]
-
-def make_env1(individual=True, num_envs=1):
-    def env_fn():
-        if individual:
-            return simple_tag_v3.parallel_env()
-        else:
-            return simple_tag_v3.parallel_env(max_cycles=50)
-
-    return PettingZooParallelWrapper(env_fn, num_envs)
-
-def make_env2(individual=True, num_envs=1):
-    def env_fn():
-        if individual:
-            return rps_v2.parallel_env()
-        else:
-            return rps_v2.parallel_env(num_actions=5)
-
-    return PettingZooParallelWrapper(env_fn, num_envs)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='PettingZoo Environment Configuration')
-    parser.add_argument('--num_envs', type=int, default=4, help='Number of parallel environments')
-    args = parser.parse_args()
-
-    # Example usage
-    individual_env1 = make_env1(individual=True, num_envs=args.num_envs)
-    cooperative_env1 = make_env1(individual=False, num_envs=args.num_envs)
-    
-    individual_env2 = make_env2(individual=True, num_envs=args.num_envs)
-    cooperative_env2 = make_env2(individual=False, num_envs=args.num_envs)
-    
-    print("Environments created successfully.")
+def create_simple_tag_v3(num_good, num_adversaries, num_obstacles, max_cycles, continuous_actions):
+    env = simple_tag_v3.env(render
+    return env
