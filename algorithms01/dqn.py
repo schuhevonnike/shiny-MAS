@@ -4,6 +4,8 @@ import torch.optim as optim
 import numpy as np
 import random
 from pettingzoo.utils import agent_selector
+from rlcard.games.doudizhu.utils import action
+
 
 class QNetworkBase(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -32,50 +34,26 @@ class DQNAdversary(nn.Module):
         self.epsilon = 0.1
         self.device = device
 
-    def select_action(self, state, evaluation=False):
-        if not evaluation and random.random() < self.epsilon:
-            return np.random.randint(self.action_dim)
-
-        # If state is a dictionary, convert it to a list of values
+    def preprocess_state(self, state):
         if isinstance(state, dict):
+            # Flatten the dictionary values into a single list
             state = list(state.values())
-            # If the values are lists or arrays, flatten them
             state = [item for sublist in state for item in
                      (sublist if isinstance(sublist, (list, tuple, np.ndarray)) else [sublist])]
 
-        # Ensure state is a numpy array of the correct dtype
-        if isinstance(state, list):
+        if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
+            # Convert to a numpy array with float32 dtype
             state = np.array(state, dtype=np.float32)
-        elif isinstance(state, np.ndarray) and state.dtype == object:
-            state = np.array(state.tolist(), dtype=np.float32)
-            return state
+        # Convert to a FloatTensor and move to the appropriate device
+        return torch.FloatTensor(state).unsqueeze(0).to(self.device)
+    def select_action(self, state, evaluation=False):
+        print(f"State before preprocessing: {state}, type: {type(state)}")
+        state = self.preprocess_state(state)
+        if not evaluation and random.random() < self.epsilon:
+            action =  np.random.randint(self.action_dim)
 
-        # Folgende Zeile schmeißt nen Error:
-        #state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        if random.random() < self.epsilon:
-            action = np.random.uniform(-1, 1, size=self.actor.fc3.out_features)
-        else:
             with torch.no_grad():
-                action = self.actor(state).cpu().numpy()[0]
-        return action
-
-        # Ensure state length matches the expected length (e.g., 16)
-        expected_length = 16  # Replace with the actual expected length
-        current_length = len(state)
-
-        if current_length < expected_length:
-            # Pad state with zeros if it's shorter than expected
-            state = np.pad(state, (0, expected_length - current_length), 'constant')
-        elif current_length > expected_length:
-            # Trim state if it's longer than expected
-            state = state[:expected_length]
-
-        # Convert the state to a PyTorch tensor
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-
-        # Use the model to select the action
-        with torch.no_grad():
-            return self.actor(state).argmax().item()
+                return self.actor(state).cpu().numpy()[0]
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.append((state, action, reward, next_state, done))
@@ -86,16 +64,22 @@ class DQNAdversary(nn.Module):
 
         batch = random.sample(self.replay_buffer, 64)
         state, action, reward, next_state, done = zip(*batch)
-        state = torch.FloatTensor(state).to(self.device)
-        action = torch.LongTensor(action).to(self.device)
+
+        state = torch.FloatTensor(np.array(state)).to(self.device)
+        action = torch.FloatTensor(np.array(action)).to(self.device)
         reward = torch.FloatTensor(reward).to(self.device)
-        next_state = torch.FloatTensor(next_state).to(self.device)
+        next_state = torch.FloatTensor(np.array(next_state)).to(self.device)
         done = torch.FloatTensor(done).to(self.device)
 
-        q_values = self.actor(state).gather(1, action.unsqueeze(1)).squeeze(1)
+        q_values = self.actor(state)
+        q_value = q_values.gather(1, action.long().unsqueeze(-1)).squeeze(-1)
+
         with torch.no_grad():
-            target_q_values = reward + (1 - done) * self.gamma * self.target_q_network(next_state).max(1)[0]
-        loss = self.criterion(q_values, target_q_values)
+            next_q_values = self.target_q_network(next_state)
+            next_q_value = next_q_values.max(1)[0]
+            target_q_value = reward + (1 - done) * self.gamma * next_q_value
+
+        loss = self.criterion(q_value, target_q_value)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -118,48 +102,27 @@ class DQNCooperator(nn.Module):
         self.epsilon = 0.1
         self.device = device
 
-    def select_action(self, state, evaluation=False):
-        if not evaluation and random.random() < self.epsilon:
-            return np.random.randint(self.action_dim)
-
-        # If state is a dictionary, convert it to a list of values
+    def preprocess_state(self, state):
         if isinstance(state, dict):
+            # Flatten the dictionary values into a single list
             state = list(state.values())
-            # If the values are lists or arrays, flatten them
             state = [item for sublist in state for item in
                      (sublist if isinstance(sublist, (list, tuple, np.ndarray)) else [sublist])]
-            return state
-        # Ensure state is a numpy array of the correct dtype
-        if isinstance(state, list):
+
+        if isinstance(state, list) or (isinstance(state, np.ndarray) and state.dtype == object):
+            # Convert to a numpy array with float32 dtype
             state = np.array(state, dtype=np.float32)
-        elif isinstance(state, np.ndarray) and state.dtype == object:
-            state = np.array(state.tolist(), dtype=np.float32)
 
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        if random.random() < self.epsilon:
-            action = np.random.uniform(-1, 1, size=self.actor.fc3.out_features)
-        else:
+        # Convert to a FloatTensor and move to the appropriate device
+        return torch.FloatTensor(state).unsqueeze(0).to(self.device)
+
+    def select_action(self, state, evaluation=False):
+        state = self.preprocess_state(state)
+        if not evaluation and random.random() < self.epsilon:
+            action = np.random.randint(self.action_dim)
+
             with torch.no_grad():
-                action = self.actor(state).cpu().numpy()[0]
-        return action
-
-        # Ensure state length matches the expected length (e.g., 16)
-        expected_length = 16  # Replace with the actual expected length
-        current_length = len(state)
-
-        if current_length < expected_length:
-            # Pad state with zeros if it's shorter than expected
-            state = np.pad(state, (0, expected_length - current_length), 'constant')
-        elif current_length > expected_length:
-            # Trim state if it's longer than expected
-            state = state[:expected_length]
-
-        # Convert the state to a PyTorch tensor
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-
-        # Use the model to select the action
-        with torch.no_grad():
-            return self.actor(state).argmax().item()
+                return self.actor(state).cpu().numpy()[0]
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.append((state, action, reward, next_state, done))
@@ -170,16 +133,22 @@ class DQNCooperator(nn.Module):
 
         batch = random.sample(self.replay_buffer, 64)
         state, action, reward, next_state, done = zip(*batch)
-        state = torch.FloatTensor(state).to(self.device)
-        action = torch.LongTensor(action).to(self.device)
+
+        state = torch.FloatTensor(np.array(state)).to(self.device)
+        action = torch.FloatTensor(np.array(action)).to(self.device)
         reward = torch.FloatTensor(reward).to(self.device)
-        next_state = torch.FloatTensor(next_state).to(self.device)
+        next_state = torch.FloatTensor(np.array(next_state)).to(self.device)
         done = torch.FloatTensor(done).to(self.device)
 
-        q_values = self.actor(state).gather(1, action.unsqueeze(1)).squeeze(1)
+        q_values = self.actor(state)
+        q_value = q_values.gather(1, action.long().unsqueeze(-1)).squeeze(-1)
+
         with torch.no_grad():
-            target_q_values = reward + (1 - done) * self.gamma * self.target_q_network(next_state).max(1)[0]
-        loss = self.criterion(q_values, target_q_values)
+            next_q_values = self.target_q_network(next_state)
+            next_q_value = next_q_values.max(1)[0]
+            target_q_value = reward + (1 - done) * self.gamma * next_q_value
+
+        loss = self.criterion(q_value, target_q_value)
 
         self.optimizer.zero_grad()
         loss.backward()
