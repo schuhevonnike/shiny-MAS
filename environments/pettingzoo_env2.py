@@ -65,8 +65,7 @@ class PettingZooEnv(gym.Env):
         # Set the seed for the environment
         self.env.seed(seed)
 
-
-# From pettingzoo.farama.org: Usage of simple_tag_v3 in AEC environments (classic agent environment cycles)
+# Sourced from pettingzoo.farama.org: Usage of simple_tag_v3 in AEC environments (classic agent environment cycles)
 '''
 env = simple_tag_v3.env(render_mode="human")
 env.reset(seed=42)
