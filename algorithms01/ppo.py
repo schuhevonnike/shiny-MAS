@@ -3,66 +3,75 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from collections import deque
-import random
 
 
-class DQN(nn.Module):
-    def __init__(self, state_size, action_size):
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, action_size)
+class PPOPolicy(nn.Module):
+    def __init__(self, state_size, action_size, hidden_size=64):
+        super(PPOPolicy, self).__init__()
+        self.fc1 = nn.Linear(state_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, action_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        return torch.softmax(self.fc3(x), dim=-1)
 
 
-class DQNAgent:
-    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0, epsilon_decay=0.995,
-                 min_epsilon=0.01):
-        self.action_size = action_size
+class PPOAgent:
+    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=0.2, update_steps=10):
+        self.policy = PPOPolicy(state_size, action_size)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.min_epsilon = min_epsilon
-        self.memory = deque(maxlen=2000)
-        self.model = DQN(state_size, action_size)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-        self.criterion = nn.MSELoss()
+        self.update_steps = update_steps
+        self.memory = []
 
     def act(self, state):
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        q_values = self.model(state)
-        return torch.argmax(q_values).item()
+        probs = self.policy(state)
+        dist = torch.distributions.Categorical(probs)
+        action = dist.sample()
+        return action.item(), dist.log_prob(action)
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
+    def remember(self, state, action, reward, next_state, done, log_prob):
+        self.memory.append((state, action, reward, next_state, done, log_prob))
 
-    def replay(self, batch_size=32):
-        if len(self.memory) < batch_size:
-            return
+    def update(self):
+        states, actions, rewards, next_states, dones, old_log_probs = zip(*self.memory)
 
-        minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-            reward = torch.tensor(reward, dtype=torch.float32)
-            done = torch.tensor(done, dtype=torch.float32)
+        states = torch.tensor(states, dtype=torch.float32)
+        actions = torch.tensor(actions)
+        rewards = torch.tensor(rewards, dtype=torch.float32)
+        next_states = torch.tensor(next_states, dtype=torch.float32)
+        dones = torch.tensor(dones, dtype=torch.float32)
+        old_log_probs = torch.stack(old_log_probs)
 
-            target = reward
-            if not done:
-                target += self.gamma * torch.max(self.model(next_state))
+        # Compute returns and advantages
+        returns = []
+        advantages = []
+        R = 0
+        advantage = 0
+        for reward, done in zip(rewards[::-1], dones[::-1]):
+            R = reward + self.gamma * R * (1 - done)
+            returns.append(R)
+            advantage = R - advantage
+            advantages.append(advantage)
 
-            output = self.model(state)[0, action]
-            loss = self.criterion(output, target)
+        returns = torch.tensor(returns[::-1])
+        advantages = torch.tensor(advantages[::-1])
+
+        for _ in range(self.update_steps):
+            probs = self.policy(states)
+            dist = torch.distributions.Categorical(probs)
+            new_log_probs = dist.log_prob(actions)
+            ratio = (new_log_probs - old_log_probs).exp()
+            surr1 = ratio * advantages
+            surr2 = torch.clamp(ratio, 1 - self.epsilon, 1 + self.epsilon) * advantages
+            loss = -torch.min(surr1, surr2).mean()
 
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-        if self.epsilon > self.min_epsilon:
-            self.epsilon *= self.epsilon_decay
+        self.memory = []

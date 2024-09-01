@@ -1,5 +1,5 @@
 import torch
-from environments.pettingzoo_env import parallel_env
+from environments.pettingzoo_env2 import parallel_env
 
 
 def select_action(policy, observation, cooperative=False):

@@ -1,38 +1,35 @@
-#import torch
-#import pandas
-#import os
-#import gymnasium
-#from utils.training2 import train
-#from utils.evaluation2 import evaluate
-
-
-# Experiment parameters
-#agent_types = ['adversary', 'cooperator']
-# ...
-
-# Cuda cores are better suited for such tasks, so ideally, we want to run the program on a cuda. If not possible, use the standard CPU.
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-#def run_experiment(env):
-    # Initialize separate dictionaries for adversary and cooperator agents
-    #adversary_agents = {}
-    #cooperator_agents = {}
-
+import torch
 import argparse
-from environments.pettingzoo_env import parallel_env
+
+from pettingzoo import AECEnv, ParallelEnv
+from pettingzoo.utils.conversions import parallel_to_aec, aec_to_parallel, aec_to_parallel_wrapper
+from pettingzoo.utils.wrappers import OrderEnforcingWrapper, TerminateIllegalWrapper
+
+from environments.pettingzoo_env2 import parallel_env
 from algorithms01.dqn import DQNAgent
 from algorithms01.ppo import PPOAgent
 from algorithms01.sac import SACAgent
 from algorithms01.maddpg import MADDPGAgent
-from training2 import train
-from evaluation2 import evaluate
+from utils.training2 import train
+from utils.evaluation2 import evaluate
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def initialize_agents(env, algorithm, mode='individual'):
-    agents = {}
-    state_size = env.observation_space.shape[0]
+    # Unwrap the environment if it is wrapped
+    if hasattr(env, 'unwrapped'):
+        env = env.unwrapped
+
+    # Determine the correct environment format
+    if hasattr(env, 'observation_space') and hasattr(env.observation_space, 'shape'):
+        state_size = env.observation_space.shape[0]
+    else:
+        raise AttributeError("The environment does not have a valid observation_space.")
+
     action_size = env.action_space.n
 
+    agents = {}
     for agent_id in env.possible_agents:
         if algorithm == 'DQN':
             agents[agent_id] = DQNAgent(state_size, action_size, cooperative=(mode == 'cooperative'))
@@ -47,9 +44,16 @@ def initialize_agents(env, algorithm, mode='individual'):
 
     return agents
 
+def run_experiment(env_fn, algorithm, num_episodes):
+    # Initialize the environment
+    env = env_fn()
+    print(f"Original type of env: {type(env)}")
 
-def run_experiment(algorithm, mode, num_episodes):
-    env = parallel_env()
+    # Convert environment to AEC if needed
+    if isinstance(env, aec_to_parallel_wrapper):
+        env = env.aec_env  # Access the underlying AEC environment
+    elif isinstance(env, ParallelEnv):
+        env = parallel_to_aec(env)  # Convert to AEC if necessary
 
     # Initialize agents for individual and cooperative modes
     agents_individual = initialize_agents(env, algorithm, mode='individual')
@@ -69,12 +73,19 @@ def run_experiment(algorithm, mode, num_episodes):
     print("Evaluating Cooperative Agents:")
     avg_rewards_cooperative = evaluate(agents_cooperative, num_episodes=num_episodes, cooperative=True)
 
-    # Compare results
+    # Print and use results
     print(f"Average Rewards (Individual): {avg_rewards_individual}")
     print(f"Average Rewards (Cooperative): {avg_rewards_cooperative}")
 
-    env.close()
+    # Compare results if needed
+    if avg_rewards_individual > avg_rewards_cooperative:
+        print("Individual agents performed better.")
+    elif avg_rewards_individual < avg_rewards_cooperative:
+        print("Cooperative agents performed better.")
+    else:
+        print("Individual and cooperative agents performed equally well.")
 
+    env.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison")
@@ -83,4 +94,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    run_experiment(algorithm=args.algorithm, mode='all', num_episodes=args.num_episodes)
+    run_experiment(env_fn=parallel_env, algorithm=args.algorithm, num_episodes=args.num_episodes)

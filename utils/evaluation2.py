@@ -1,5 +1,5 @@
 import torch
-from environments.pettingzoo_env import parallel_env
+from environments.pettingzoo_env2 import parallel_env
 
 
 def evaluate(agents, num_episodes=100, cooperative=False):
