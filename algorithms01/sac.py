@@ -2,118 +2,113 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import random
+from collections import deque
 
-class ActorAdversary(nn.Module):
-    def __init__(self, state_dim, action_dim, max_action):
-        super(ActorAdversary, self).__init__()
-        self.fc1 = nn.Linear(state_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, action_dim)
-        self.max_action = max_action
 
-    def forward(self, state):
-        x = torch.relu(self.fc1(state))
-        x = torch.relu(self.fc2(x))
-        return self.max_action * torch.tanh(self.fc3(x))
-
-class ActorCooperator(nn.Module):
-    def __init__(self, state_dim, action_dim, max_action):
-        super(ActorCooperator, self).__init__()
-        self.fc1 = nn.Linear(state_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, action_dim)
-        self.max_action = max_action
-
-    def forward(self, state):
-        x = torch.relu(self.fc1(state))
-        x = torch.relu(self.fc2(x))
-        return self.max_action * torch.tanh(self.fc3(x))
-
-class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
-        super(Critic, self).__init__()
-        self.fc1 = nn.Linear(state_dim + action_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 1)
+class QNetwork(nn.Module):
+    def __init__(self, state_size, action_size, hidden_size=64):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_size + action_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, 1)
 
     def forward(self, state, action):
-        x = torch.cat([state, action], 1)
+        x = torch.cat([state, action], dim=1)
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
-class SAC:
-    def __init__(self, state_dim, action_dim, max_action, device):
-        self.device = device
-        self.actor_adversary = ActorAdversary(state_dim, action_dim, max_action).to(device)
-        self.actor_cooperator = ActorCooperator(state_dim, action_dim, max_action).to(device)
-        self.critic1 = Critic(state_dim, action_dim).to(device)
-        self.critic2 = Critic(state_dim, action_dim).to(device)
-        self.actor_adversary_optimizer = optim.Adam(self.actor_adversary.parameters(), lr=3e-4)
-        self.actor_cooperator_optimizer = optim.Adam(self.actor_cooperator.parameters(), lr=3e-4)
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=3e-4)
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=3e-4)
-        self.max_action = max_action
-        self.action_dim = action_dim
-        self.replay_buffer = []
 
-    def select_action(self, state, agent_type, evaluation=False):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
-        if agent_type == 'adversary':
-            action = self.actor_adversary(state).cpu().data.numpy().flatten()
-        else:
-            action = self.actor_cooperator(state).cpu().data.numpy().flatten()
-        if not evaluation:
-            action += np.random.normal(0, self.max_action * 0.1, size=self.action_dim)
-        return action.clip(-self.max_action, self.max_action)
+class PolicyNetwork(nn.Module):
+    def __init__(self, state_size, action_size, hidden_size=64):
+        super(PolicyNetwork, self).__init__()
+        self.fc1 = nn.Linear(state_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, action_size)
+        self.log_std = nn.Parameter(torch.zeros(action_size))
 
-    def update(self, state, action, reward, next_state, done, agent_type):
-        self.replay_buffer.append((state, action, reward, next_state, done))
-        if len(self.replay_buffer) > 1000:
-            self.replay_buffer.pop(0)
-        if len(self.replay_buffer) < 100:
+    def forward(self, state):
+        x = torch.relu(self.fc1(state))
+        x = torch.relu(self.fc2(x))
+        mean = self.fc3(x)
+        std = torch.exp(self.log_std)
+        return mean, std
+
+
+class SACAgent:
+    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, alpha=0.2):
+        self.policy = PolicyNetwork(state_size, action_size)
+        self.q1 = QNetwork(state_size, action_size)
+        self.q2 = QNetwork(state_size, action_size)
+        self.target_q1 = QNetwork(state_size, action_size)
+        self.target_q2 = QNetwork(state_size, action_size)
+        self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
+        self.q1_optimizer = optim.Adam(self.q1.parameters(), lr=learning_rate)
+        self.q2_optimizer = optim.Adam(self.q2.parameters(), lr=learning_rate)
+        self.gamma = gamma
+        self.alpha = alpha
+
+        # Initialize target networks
+        self.target_q1.load_state_dict(self.q1.state_dict())
+        self.target_q2.load_state_dict(self.q2.state_dict())
+
+        self.memory = deque(maxlen=2000)
+
+    def act(self, state):
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        mean, std = self.policy(state)
+        dist = torch.distributions.Normal(mean, std)
+        action = dist.sample()
+        return action.squeeze(0).numpy(), dist.log_prob(action).sum(dim=-1)
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    def update(self, batch_size=64):
+        if len(self.memory) < batch_size:
             return
 
-        batch = random.sample(self.replay_buffer, 64)
-        state, action, reward, next_state, done = zip(*batch)
+        minibatch = random.sample(self.memory, batch_size)
+        states, actions, rewards, next_states, dones = zip(*minibatch)
 
-        state = torch.FloatTensor(np.array(state)).to(self.device)
-        action = torch.FloatTensor(np.array(action)).to(self.device)
-        reward = torch.FloatTensor(np.array(reward)).to(self.device).reshape(-1, 1)
-        next_state = torch.FloatTensor(np.array(next_state)).to(self.device)
-        done = torch.FloatTensor(np.array(done)).to(self.device).reshape(-1, 1)
+        states = torch.tensor(states, dtype=torch.float32)
+        actions = torch.tensor(actions, dtype=torch.float32)
+        rewards = torch.tensor(rewards, dtype=torch.float32)
+        next_states = torch.tensor(next_states, dtype=torch.float32)
+        dones = torch.tensor(dones, dtype=torch.float32)
 
         with torch.no_grad():
-            if agent_type == 'adversary':
-                next_action = self.actor_adversary(next_state)
-            else:
-                next_action = self.actor_cooperator(next_state)
-            target_q1 = self.critic1(next_state, next_action)
-            target_q2 = self.critic2(next_state, next_action)
-            target_q = reward + (1 - done) * 0.99 * torch.min(target_q1, target_q2)
+            next_actions, next_log_probs = self.act(next_states)
+            target_q1 = self.target_q1(next_states, next_actions)
+            target_q2 = self.target_q2(next_states, next_actions)
+            target_value = torch.min(target_q1, target_q2) - self.alpha * next_log_probs
+            target = rewards + (1 - dones) * self.gamma * target_value
 
-            current_q1 = self.critic1(state, action)
-            current_q2 = self.critic2(state, action)
+        q1 = self.q1(states, actions)
+        q2 = self.q2(states, actions)
+        q1_loss = nn.MSELoss()(q1, target)
+        q2_loss = nn.MSELoss()(q2, target)
 
-            critic1_loss = nn.MSELoss()(current_q1, target_q)
-            critic2_loss = nn.MSELoss()(current_q2, target_q)
+        self.q1_optimizer.zero_grad()
+        q1_loss.backward()
+        self.q1_optimizer.step()
 
-            self.critic1_optimizer.zero_grad()
-            critic1_loss.backward()
-            self.critic1_optimizer.step()
+        self.q2_optimizer.zero_grad()
+        q2_loss.backward()
+        self.q2_optimizer.step()
 
-            self.critic2_optimizer.zero_grad()
-            critic2_loss.backward()
-            self.critic2_optimizer.step()
+        actions, log_probs = self.act(states)
+        q1 = self.q1(states, actions)
+        q2 = self.q2(states, actions)
+        q = torch.min(q1, q2)
+        policy_loss = (self.alpha * log_probs - q).mean()
 
-            if agent_type == 'adversary':
-                actor_loss = -self.critic1(state, self.actor_adversary(state)).mean()
-                self.actor_adversary_optimizer.zero_grad()
-                actor_loss.backward()
-                self.actor_adversary_optimizer.step()
-            else:
-                actor_loss = -self.critic1(state, self.actor_cooperator(state)).mean()
-                self.actor_cooperator_optimizer.zero_grad()
-                actor_loss.backward()
-                self.actor_cooperator_optimizer.step()
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
+
+        for target_param, param in zip(self.target_q1.parameters(), self.q1.parameters()):
+            target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+
+        for target_param, param in zip(self.target_q2.parameters(), self.q2.parameters()):
+            target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)

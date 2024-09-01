@@ -1,48 +1,57 @@
-import numpy as np
 import torch
-from torch.optim import Adam
+from environments.pettingzoo_env import parallel_env
 
-def train(env, adversary_agents, cooperator_agents, num_episodes):
+
+def select_action(policy, observation, cooperative=False):
+    with torch.no_grad():
+        observation = torch.tensor(observation, dtype=torch.float32)
+        action_probs = policy(observation)
+        if cooperative:
+            action = torch.argmax(action_probs).item()
+        else:
+            action = action_probs.multinomial(num_samples=1).item()
+    return action
+
+
+def train(agents, num_episodes=1000, gamma=0.99, cooperative=False):
+    env = parallel_env()
+    rewards_history = {agent: [] for agent in agents.keys()}
+
     for episode in range(num_episodes):
-        # Initialize the state
-        state = env.reset()
-        done = {agent: False for agent in env.agents}
-        adversary_rewards = {agent: 0 for agent in adversary_agents}
-        cooperator_rewards = {agent: 0 for agent in cooperator_agents}
+        observations = env.reset()
+        total_rewards = {agent: 0 for agent in env.possible_agents}
 
-        # Assuming env.agents is something like ['agent_0', 'agent_1', 'agent_2', ...]
-        agent_to_idx = {agent: idx for idx, agent in enumerate(env.agents)}
-        while not all(done.values()):
-            actions = {}
-            for agent in env.agents:
-                agent_idx = agent_to_idx[agent]  # Get the integer index for the current agent
-                if agent in adversary_agents:
-                    actions[agent] = adversary_agents[agent].select_action(state[agent_idx])
-                elif agent in cooperator_agents:
-                    actions[agent] = cooperator_agents[agent].select_action(state[agent_idx])
-            obs, rewards, done, infos = env.step(actions)
+        for agent in env.agent_iter():
+            observation, reward, termination, truncation, _ = env.last()
 
-            # Update agents based on the results of the step
-            for agent in env.agents:
-                agent_idx = agent_to_idx[agent]
-                if agent in adversary_agents and not done[agent]:
-                    adversary_agents[agent].update(state[agent_idx], actions[agent], rewards[agent], obs[agent], done[agent])
-                    adversary_rewards[agent] += rewards[agent]
-                elif agent in cooperator_agents and not done[agent]:
-                    cooperator_agents[agent].update(state[agent_idx], actions[agent], rewards[agent], obs[agent], done[agent])
-                    cooperator_rewards[agent] += rewards[agent]
+            if termination or truncation:
+                env.step(None)
+                continue
 
-            # Update the state for the next iteration
-            # Make sure to structure `state` correctly as an array for further use
-            state = [obs]
+            action = select_action(agents[agent], observation, cooperative)
+            env.step(action)
 
-            #state = np.array([obs], dtype=np.float32)
+            next_observation, reward, done, _ = env.last(observation)
+            reward = sum(reward.values()) if cooperative else reward[agent]
 
-            # After the loop completes, return the final observations, rewards, done flags, and infos
-            return state, list(obs), list(rewards), list(done), infos
+            # Update the model
+            target = reward + gamma * torch.max(agents[agent](torch.tensor(next_observation, dtype=torch.float32)))
+            predicted = agents[agent](torch.tensor(observation, dtype=torch.float32))[action]
+            loss = torch.nn.functional.mse_loss(predicted, target)
 
-        adversary_total_reward = sum(adversary_rewards.values())
-        cooperator_total_reward = sum(cooperator_rewards.values())
-        print(
-            f"Episode {episode + 1} - Adversary Total Reward: {adversary_total_reward}, Cooperator Total Reward: {cooperator_total_reward}")
-        return adversary_agents, cooperator_agents
+            agents[agent].optimizer.zero_grad()
+            loss.backward()
+            agents[agent].optimizer.step()
+
+            total_rewards[agent] += reward
+
+            if done:
+                break
+
+        for agent in total_rewards:
+            rewards_history[agent].append(total_rewards[agent])
+
+        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+
+    env.close()
+    return rewards_history
