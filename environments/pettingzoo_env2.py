@@ -10,7 +10,8 @@ def make_env():
 
 if __name__ == "__main__":
     env = make_env()
-    env.reset()  # Initialize the environment
+    observation = env.reset()  # Initialize the environment
+    print(f"Initial observation after reset: {observation}")
     print("Environment initialized")
 
     # Dictionary to store the last observation for each agent in the iteration
@@ -21,7 +22,7 @@ if __name__ == "__main__":
         # Retrieve the recent observation, reward, termination, truncation, and info for the current agent
         observation, reward, termination, truncation, info = env.last()
         last_observations[agent] = observation  # Store the last observation
-
+        print(f"Last observations' shape: {last_observations.shape}")
         if termination or truncation:
             action = None  # No action if the agent is done
         else:

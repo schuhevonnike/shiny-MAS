@@ -9,11 +9,12 @@ import random
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 64)
+        self.fc1 = nn.Linear(state_size, 64)  # Ensure state_size matches the input
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, action_size)
 
     def forward(self, x):
+        # Feed forward network using ReLU activation function
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
@@ -22,6 +23,7 @@ class DQN(nn.Module):
 class DQNAgent:
     def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
                  epsilon_decay=0.995, min_epsilon=0.01):
+        self.input_dim = state_size  # Define input_dim here
         self.action_size = action_size
         self.gamma = gamma
         self.epsilon = epsilon
@@ -60,21 +62,42 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
+            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
+
+            # Ensure shapes match the expected dimensions
+            assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
+            assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
+
+            # Debugging statements
+            print(f"Shape of input tensor 'state': {state.shape}")
+            print(f"Shape of input tensor 'next_state': {next_state.shape}")
+
+            # Convert reward and done to tensors
             reward = torch.tensor(reward, dtype=torch.float32)
             done = torch.tensor(done, dtype=torch.float32)
-
             target = reward
+
             if not done:
-                target += self.gamma * torch.max(self.model(next_state))
+                with torch.no_grad():
+                    next_state_value = self.model(next_state)
+                    print(f"Next state value shape: {next_state_value.shape}")
+                target += self.gamma * torch.max(next_state_value)
 
             output = self.model(state)[0, action]
+
+            # Ensure target is a tensor with the same shape as output
+            target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
+            print(f"Shape of target tensor: {target.shape}")
+
+            # Loss calculation
             loss = self.criterion(output, target)
 
+            # Optimization step
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-        if self.epsilon > self.min_epsilon:
-            self.epsilon *= self.epsilon_decay
+            # Epsilon decay
+            if self.epsilon > self.min_epsilon:
+                self.epsilon *= self.epsilon_decay

@@ -20,33 +20,48 @@ def initialize_agents(env, algorithm, mode):
     print(f"Environment type: {type(env)}")
     print(f"First agent: {first_agent}")
     print(f"Observation space (first agent): {env.observation_space(first_agent)}")
+    print(f"Observation shape (first agent): {env.observation_space(first_agent).shape}")
     print(f"Action space (first agent): {env.action_space(first_agent)}")
+    print(f"Action shape (first agent): {env.action_space(first_agent).shape}")
 
     if first_agent is None:
         raise AttributeError("The environment does not have any possible agents.")
+
+    #Print actual observation shape to debug
+    #observation = env.reset()
+    #print(f"Initial observation: {observation}")
+    #if first_agent not in observation:
+    #    raise ValueError("The initial observation does not contain the expected agent.")
+    #first_observation = observation[first_agent]
+    #print(f"Actual first observation shape: {first_observation.shape}")
 
     # Get state and action sizes using the first agent
     if callable(env.observation_space):
         state_size = env.observation_space(first_agent).shape[0]
     else:
         state_size = env.observation_space.shape[0]
+    print(f"State size inferred: {state_size}")
+    # Ensure consistency
+    #assert state_size == first_observation.shape[0], \
+    #    f"Inferred state size {state_size} does not match actual observation shape {first_observation.shape[0]}"
 
     if callable(env.action_space):
         action_size = env.action_space(first_agent).n
     else:
         action_size = env.action_space.n
+    print(f"Action size inferred: {action_size}")
 
     agents = {}
     for agent_id in env.possible_agents:
         cooperative = (mode == 'cooperative')  # Determine if agents should be cooperative
         if algorithm == 'DQN':
             agents[agent_id] = DQNAgent(state_size, action_size, cooperative=cooperative)
+            print(f"Initialized DQNAgent with state size: {state_size}")
         elif algorithm == 'PPO':
             agents[agent_id] = PPOAgent(state_size, action_size, cooperative=cooperative)
         elif algorithm == 'SAC':
             agents[agent_id] = SACAgent(state_size, action_size, cooperative=cooperative)
-        # Add other agent types as necessary (MADDPG as well as individual mode currently missing)
-
+        # Add other agent types as necessary (MADDPG as well as individual mode currently missing
     return agents
 
 def run_experiment(env_fn, algorithm, num_episodes=10):
