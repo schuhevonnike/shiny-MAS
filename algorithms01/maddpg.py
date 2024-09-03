@@ -66,6 +66,7 @@ class MADDPGAgent:
         minibatch = random.sample(self.memory, batch_size)
         states, actions, rewards, next_states, dones = zip(*minibatch)
 
+        # "Replace torch.tensor(..., dtype=...) with target = target.clone().detach().float().unsqueeze(0)"
         states = torch.tensor(states, dtype=torch.float32)
         actions = torch.tensor(actions, dtype=torch.float32)
         rewards = torch.tensor(rewards, dtype=torch.float32)
