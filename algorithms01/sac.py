@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from collections import deque
 import random
 
@@ -53,7 +52,6 @@ class SACAgent:
         # Initialize target networks
         self.target_q1.load_state_dict(self.q1.state_dict())
         self.target_q2.load_state_dict(self.q2.state_dict())
-
         self.memory = deque(maxlen=2000)
 
     def act(self, state):
@@ -76,11 +74,16 @@ class SACAgent:
         minibatch = random.sample(self.memory, batch_size)
         states, actions, rewards, next_states, dones = zip(*minibatch)
 
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.float32)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        states = states.clone().detach().float()
+        # states = torch.tensor(states, dtype=torch.float32)
+        actions = actions.clone().detach().float()
+        # actions = torch.tensor(actions, dtype=torch.float32)
+        rewards = rewards.clone().detach().float()
+        # rewards = torch.tensor(rewards, dtype=torch.float32)
+        next_states = next_states.clone().detach().float()
+        # next_states = torch.tensor(next_states, dtype=torch.float32)
+        dones = dones.clone().detach().float()
+        # dones = torch.tensor(dones, dtype=torch.float32)
 
         with torch.no_grad():
             next_actions, next_log_probs = self.act(next_states)

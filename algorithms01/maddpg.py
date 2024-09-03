@@ -66,12 +66,16 @@ class MADDPGAgent:
         minibatch = random.sample(self.memory, batch_size)
         states, actions, rewards, next_states, dones = zip(*minibatch)
 
-        # "Replace torch.tensor(..., dtype=...) with target = target.clone().detach().float().unsqueeze(0)"
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.float32)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        states = states.clone().detach().float()
+        #states = torch.tensor(states, dtype=torch.float32)
+        actions = actions.clone().detach().float()
+        #actions = torch.tensor(actions, dtype=torch.float32)
+        rewards = rewards.clone().detach().float()
+        #rewards = torch.tensor(rewards, dtype=torch.float32)
+        next_states = next_states.clone().detach().float()
+        #next_states = torch.tensor(next_states, dtype=torch.float32)
+        dones = dones.clone().detach().float()
+        #dones = torch.tensor(dones, dtype=torch.float32)
 
         # Next action and Q-value for next states
         next_actions = self.target_actor(next_states)

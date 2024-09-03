@@ -12,7 +12,7 @@ if __name__ == "__main__":
     env = make_env()
     observation = env.reset()  # Initialize the environment
     print(f"Initial observation after reset: {observation}")
-    print("Environment initialized")
+    #print("Environment initialized")
 
     # Dictionary to store the last observation for each agent in the iteration
     last_observations = {}
@@ -33,7 +33,6 @@ if __name__ == "__main__":
         # Reset environment if any agent's episode has ended
         if termination or truncation:
             env.reset()
-
         # Debugging prints to verify interactions
         print(f"Agent: {agent}, Action: {action}, Observation: {observation}, Reward: {reward}, Done: {termination or truncation}")
 

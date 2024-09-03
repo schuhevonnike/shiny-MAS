@@ -30,7 +30,8 @@ class PPOAgent:
 
     def act(self, state):
         """Select an action based on the current state."""
-        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        state = state.clone().detach().float().unsqueeze(0)
+        #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         probs = self.policy(state)
         dist = torch.distributions.Categorical(probs)
         action = dist.sample()
@@ -44,11 +45,16 @@ class PPOAgent:
         """Update the policy network using the PPO algorithm."""
         states, actions, rewards, next_states, dones, old_log_probs = zip(*self.memory)
 
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        states = states.clone().detach().float()
+        # states = torch.tensor(states, dtype=torch.float32)
+        actions = actions.clone().detach().float()
+        # actions = torch.tensor(actions, dtype=torch.float32)
+        rewards = rewards.clone().detach().float()
+        # rewards = torch.tensor(rewards, dtype=torch.float32)
+        next_states = next_states.clone().detach().float()
+        # next_states = torch.tensor(next_states, dtype=torch.float32)
+        dones = dones.clone().detach().float()
+        # dones = torch.tensor(dones, dtype=torch.float32)
         old_log_probs = torch.stack(old_log_probs)
 
         # Compute returns and advantages

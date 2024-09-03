@@ -18,7 +18,11 @@ def evaluate(agents, num_episodes=10, cooperative=False):
 
             # Select action based on the mode (cooperative or individual)
             with torch.no_grad():
+                # "Replace torch.tensor(..., dtype=...) with target = target.clone().detach().float().unsqueeze(0)"
+                # Convert float to PyTorch tensor
                 obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                # Use tensor operations
+                obs_tensor = obs_tensor.clone().detach().float().unsqueeze(0)
                 if cooperative:
                     # Cooperative mode: choose action considering cooperative strategy
                     action = agents[agent].act(obs_tensor)

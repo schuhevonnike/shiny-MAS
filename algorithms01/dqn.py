@@ -62,20 +62,23 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
+
             state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
+            state = state.clone().detach().float()
+            print(f"Shape of input tensor 'state': {state.shape}")
             next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
+            #next_state = next_state.clone().detach().float()
+            print(f"Shape of input tensor 'next_state': {next_state.shape}")
 
             # Ensure shapes match the expected dimensions
             assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
             assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
 
-            # Debugging statements
-            print(f"Shape of input tensor 'state': {state.shape}")
-            print(f"Shape of input tensor 'next_state': {next_state.shape}")
-
             # Convert reward and done to tensors
             reward = torch.tensor(reward, dtype=torch.float32)
+            reward = reward.clone().detach().float()
             done = torch.tensor(done, dtype=torch.float32)
+            done = done.clone().detach().float()
             target = reward
 
             if not done:
@@ -88,6 +91,7 @@ class DQNAgent:
 
             # Ensure target is a tensor with the same shape as output
             target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
+            target = target.clone().detach().float().unsqueeze(0)
             print(f"Shape of target tensor: {target.shape}")
 
             # Loss calculation
