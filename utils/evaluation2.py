@@ -1,13 +1,13 @@
 import torch
-from environments.pettingzoo_env2 import parallel_env
+from environments.pettingzoo_env2 import make_env
 
 
 def evaluate(agents, num_episodes=100, cooperative=False):
-    env = parallel_env()
+    env = make_env()
     rewards_history = {agent: [] for agent in agents.keys()}
 
     for episode in range(num_episodes):
-        observations = env.reset()
+        observation = env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
 
         for agent in env.agent_iter():

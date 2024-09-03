@@ -19,7 +19,8 @@ class PPOPolicy(nn.Module):
 
 
 class PPOAgent:
-    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=0.2, update_steps=10):
+    def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=0.2, update_steps=10):
+        self.cooperative = cooperative  # Cooperative flag
         self.policy = PPOPolicy(state_size, action_size)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.gamma = gamma
@@ -28,6 +29,7 @@ class PPOAgent:
         self.memory = []
 
     def act(self, state):
+        """Select an action based on the current state."""
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         probs = self.policy(state)
         dist = torch.distributions.Categorical(probs)
@@ -35,9 +37,11 @@ class PPOAgent:
         return action.item(), dist.log_prob(action)
 
     def remember(self, state, action, reward, next_state, done, log_prob):
+        """Store experience in memory."""
         self.memory.append((state, action, reward, next_state, done, log_prob))
 
     def update(self):
+        """Update the policy network using the PPO algorithm."""
         states, actions, rewards, next_states, dones, old_log_probs = zip(*self.memory)
 
         states = torch.tensor(states, dtype=torch.float32)
@@ -61,6 +65,10 @@ class PPOAgent:
         returns = torch.tensor(returns[::-1])
         advantages = torch.tensor(advantages[::-1])
 
+        # Cooperative behavior logic could be added here. For example:
+        # - Shared memory or synchronized updates between agents.
+        # - Computing returns/advantages based on joint rewards.
+
         for _ in range(self.update_steps):
             probs = self.policy(states)
             dist = torch.distributions.Categorical(probs)
@@ -75,3 +83,5 @@ class PPOAgent:
             self.optimizer.step()
 
         self.memory = []
+
+# Additional methods and logic for cooperative learning could be added.

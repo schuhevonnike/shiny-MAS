@@ -18,9 +18,10 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
+
 class DQNAgent:
-    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0, epsilon_decay=0.995,
-                 min_epsilon=0.01):
+    def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
+                 epsilon_decay=0.995, min_epsilon=0.01):
         self.action_size = action_size
         self.gamma = gamma
         self.epsilon = epsilon
@@ -30,13 +31,25 @@ class DQNAgent:
         self.model = DQN(state_size, action_size)
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
+        self.cooperative = cooperative  # New attribute to track cooperative behavior
 
-    def act(self, state):
+    def act(self, state, other_agents=None):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
+
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         q_values = self.model(state)
-        return torch.argmax(q_values).item()
+
+        if self.cooperative and other_agents:
+            # Cooperative decision making: example implementation
+            # Average Q-values with other agents (simple example)
+            combined_q_values = q_values.clone()
+            for agent in other_agents:
+                combined_q_values += agent.model(state)
+            combined_q_values /= (1 + len(other_agents))
+            return torch.argmax(combined_q_values).item()
+        else:
+            return torch.argmax(q_values).item()
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))

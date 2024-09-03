@@ -1,5 +1,5 @@
 import torch
-from environments.pettingzoo_env2 import parallel_env
+from environments.pettingzoo_env2 import make_env
 
 
 def select_action(policy, observation, cooperative=False):
@@ -13,12 +13,15 @@ def select_action(policy, observation, cooperative=False):
     return action
 
 
-def train(agents, num_episodes=1000, gamma=0.99, cooperative=False):
-    env = parallel_env()
+def train(agents, num_episodes=100, gamma=0.99, cooperative=False):
+    env = make_env()
+    # Check if `env` is an environment instance and not a wrapper object
+    if not hasattr(env, 'reset') or not hasattr(env, 'step'):
+        raise TypeError("Provided env is not a valid environment instance")
     rewards_history = {agent: [] for agent in agents.keys()}
 
     for episode in range(num_episodes):
-        observations = env.reset()
+        observation = env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
 
         for agent in env.agent_iter():

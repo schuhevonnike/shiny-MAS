@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from collections import deque
+import random
 
 
 class QNetwork(nn.Module):
@@ -36,7 +37,8 @@ class PolicyNetwork(nn.Module):
 
 
 class SACAgent:
-    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, alpha=0.2):
+    def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, alpha=0.2):
+        self.cooperative = cooperative  # Cooperative flag
         self.policy = PolicyNetwork(state_size, action_size)
         self.q1 = QNetwork(state_size, action_size)
         self.q2 = QNetwork(state_size, action_size)
@@ -55,6 +57,7 @@ class SACAgent:
         self.memory = deque(maxlen=2000)
 
     def act(self, state):
+        """Select an action based on the current state."""
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         mean, std = self.policy(state)
         dist = torch.distributions.Normal(mean, std)
@@ -62,9 +65,11 @@ class SACAgent:
         return action.squeeze(0).numpy(), dist.log_prob(action).sum(dim=-1)
 
     def remember(self, state, action, reward, next_state, done):
+        """Store experience in memory."""
         self.memory.append((state, action, reward, next_state, done))
 
     def update(self, batch_size=64):
+        """Update the policy and value networks using Soft Actor-Critic (SAC) algorithm."""
         if len(self.memory) < batch_size:
             return
 
@@ -107,8 +112,15 @@ class SACAgent:
         policy_loss.backward()
         self.policy_optimizer.step()
 
+        # Update target networks
         for target_param, param in zip(self.target_q1.parameters(), self.q1.parameters()):
             target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
 
         for target_param, param in zip(self.target_q2.parameters(), self.q2.parameters()):
             target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+
+        # Cooperative behavior logic could be added here. For example:
+        # - Shared memory or synchronized updates between agents.
+        # - Computing value updates based on joint state-action pairs.
+
+# Additional cooperative methods and logic could be added as needed.
