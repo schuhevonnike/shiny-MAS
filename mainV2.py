@@ -1,8 +1,6 @@
 import torch
 import argparse
 
-from pettingzoo import AECEnv, ParallelEnv
-from pettingzoo.utils.conversions import parallel_to_aec, aec_to_parallel_wrapper
 from environments.pettingzoo_env2 import make_env
 from algorithms01.dqn import DQNAgent
 from algorithms01.ppo import PPOAgent
@@ -12,7 +10,7 @@ from utils.evaluation2 import evaluate
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-def initialize_agents(env, algorithm, mode='individual'):
+def initialize_agents(env, algorithm, mode):
     # Unwrap the environment if it is wrapped
     if hasattr(env, 'unwrapped'):
         env = env.unwrapped
@@ -47,20 +45,14 @@ def initialize_agents(env, algorithm, mode='individual'):
             agents[agent_id] = PPOAgent(state_size, action_size, cooperative=cooperative)
         elif algorithm == 'SAC':
             agents[agent_id] = SACAgent(state_size, action_size, cooperative=cooperative)
-        # Add other agent types as necessary
+        # Add other agent types as necessary (MADDPG as well as individual mode currently missing)
 
     return agents
 
-def run_experiment(env_fn, algorithm, num_episodes=1000):
+def run_experiment(env_fn, algorithm, num_episodes=10):
     # Initialize the environment
     env = env_fn()
     print(f"Original type of env: {type(env)}")
-
-    # Convert environment to AEC if needed
-    if isinstance(env, aec_to_parallel_wrapper):
-        env = env.aec_env  # Access the underlying AEC environment
-    elif isinstance(env, ParallelEnv):
-        env = parallel_to_aec(env)  # Convert to AEC if necessary
 
     # Initialize agents for individual and cooperative modes
     print("Initializing Individual Agents...")
@@ -70,17 +62,17 @@ def run_experiment(env_fn, algorithm, num_episodes=1000):
 
     # Train agents
     print("Training Individual Agents:")
-    rewards_individual = train(agents_individual, env, num_episodes, cooperative=False)
+    rewards_individual = train(agents_individual, num_episodes=num_episodes, cooperative=False)
 
     print("Training Cooperative Agents:")
-    rewards_cooperative = train(agents_cooperative, env, num_episodes, cooperative=True)
+    rewards_cooperative = train(agents_cooperative, num_episodes=num_episodes, cooperative=True)
 
     # Evaluate agents
     print("Evaluating Individual Agents:")
-    avg_rewards_individual = evaluate(agents_individual, env, num_episodes, cooperative=False)
+    avg_rewards_individual = evaluate(agents_individual, num_episodes=num_episodes, cooperative=False)
 
     print("Evaluating Cooperative Agents:")
-    avg_rewards_cooperative = evaluate(agents_cooperative, env, num_episodes, cooperative=True)
+    avg_rewards_cooperative = evaluate(agents_cooperative, num_episodes=num_episodes, cooperative=True)
 
     # Print and compare results
     print(f"Average Rewards (Individual): {avg_rewards_individual}")
@@ -92,14 +84,13 @@ def run_experiment(env_fn, algorithm, num_episodes=1000):
         print("Cooperative agents performed better.")
     else:
         print("Individual and cooperative agents performed equally well.")
-
     env.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison")
     parser.add_argument('--algorithm', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
-    parser.add_argument('--num_episodes', type=int, default=1000, help='Number of episodes for training')
+    parser.add_argument('--num_episodes', type=int, default=10, help='Number of episodes for training')
 
     args = parser.parse_args()
 
-    run_experiment(env_fn=make_env(), algorithm=args.algorithm, num_episodes=args.num_episodes)
+    run_experiment(env_fn=make_env, algorithm=args.algorithm, num_episodes=args.num_episodes)

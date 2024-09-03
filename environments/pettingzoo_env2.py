@@ -13,12 +13,12 @@ if __name__ == "__main__":
     env.reset()  # Initialize the environment
     print("Environment initialized")
 
-    # Dictionary to store the last observation for each agent
+    # Dictionary to store the last observation for each agent in the iteration
     last_observations = {}
 
-    # Main interaction loop
+    # Main interaction loop, this now includes communication between agents via communication of the recent observation
     for agent in env.agent_iter():
-        # Get the last observation, reward, termination, truncation, and info for the current agent
+        # Retrieve the recent observation, reward, termination, truncation, and info for the current agent
         observation, reward, termination, truncation, info = env.last()
         last_observations[agent] = observation  # Store the last observation
 

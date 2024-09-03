@@ -1,56 +1,71 @@
 import torch
 from environments.pettingzoo_env2 import make_env
+from algorithms01.dqn import DQNAgent
+from algorithms01.maddpg import MADDPGAgent
+from algorithms01.ppo import PPOAgent
+from algorithms01.sac import SACAgent
 
 
-def select_action(policy, observation, cooperative=False):
+def select_action(agent, observation, cooperative=False, other_agents=None):
     with torch.no_grad():
-        observation = torch.tensor(observation, dtype=torch.float32)
-        action_probs = policy(observation)
-        if cooperative:
-            action = torch.argmax(action_probs).item()
+        if isinstance(agent, DQNAgent):
+            action = agent.act(observation)
+        elif isinstance(agent, PPOAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, SACAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, MADDPGAgent):
+            action = agent.act(observation)
         else:
-            action = action_probs.multinomial(num_samples=1).item()
+            raise ValueError("Unknown agent type")
     return action
 
 
-def train(agents, num_episodes=100, gamma=0.99, cooperative=False):
+def train(agents, num_episodes=10, cooperative=False):
     env = make_env()
     # Check if `env` is an environment instance and not a wrapper object
     if not hasattr(env, 'reset') or not hasattr(env, 'step'):
         raise TypeError("Provided env is not a valid environment instance")
-    rewards_history = {agent: [] for agent in agents.keys()}
+
+    rewards_history = {agent: [] for agent in agents}
+    gamma = 0.99  # Discount factor, adjustable based on algorithm
+    batch_size = 64  # Batch size, relevant for algorithms with replay memory
 
     for episode in range(num_episodes):
-        observation = env.reset()
+        env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
 
         for agent in env.agent_iter():
             observation, reward, termination, truncation, _ = env.last()
 
             if termination or truncation:
-                env.step(None)
+                env.step(None)  # Tell the environment no action will be taken
                 continue
 
-            action = select_action(agents[agent], observation, cooperative)
+            # Select action based on the mode (cooperative or individual)
+            action = select_action(agents[agent], observation, cooperative, other_agents=agents.values())
             env.step(action)
 
-            next_observation, reward, done, _ = env.last(observation)
-            reward = sum(reward.values()) if cooperative else reward[agent]
-
-            # Update the model
-            target = reward + gamma * torch.max(agents[agent](torch.tensor(next_observation, dtype=torch.float32)))
-            predicted = agents[agent](torch.tensor(observation, dtype=torch.float32))[action]
-            loss = torch.nn.functional.mse_loss(predicted, target)
-
-            agents[agent].optimizer.zero_grad()
-            loss.backward()
-            agents[agent].optimizer.step()
-
+            next_observation, reward, termination, truncation, _ = env.last()
             total_rewards[agent] += reward
 
-            if done:
-                break
+            # Store experience and update agent model
+            agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
 
+            if isinstance(agents[agent], DQNAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].replay(batch_size)
+            elif isinstance(agents[agent], MADDPGAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update(batch_size)
+            elif isinstance(agents[agent], PPOAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update()
+            elif isinstance(agents[agent], SACAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update(batch_size)
+
+        # Log rewards
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
 
