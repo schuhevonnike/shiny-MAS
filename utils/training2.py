@@ -19,9 +19,9 @@ def select_action(agent, observation, cooperative=False, other_agents=None):
             raise ValueError("Unknown agent type")
     return action
 
-
 def train(agents, num_episodes=10, cooperative=False):
     env = make_env()
+    # Check if `env` is an environment instance and not a wrapper object
     if not hasattr(env, 'reset') or not hasattr(env, 'step'):
         raise TypeError("Provided env is not a valid environment instance")
 
@@ -30,10 +30,11 @@ def train(agents, num_episodes=10, cooperative=False):
     batch_size = 64  # Batch size, relevant for algorithms with replay memory
 
     for episode in range(num_episodes):
-        print(f"Episode {episode + 1}/{num_episodes} started.")
-        observations = env.reset()  # Ensure this returns initial observations
+        env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
-        done = False
+        print(f"Episode {episode + 1}/{num_episodes} started.")
+
+        done = False  # Flag to manage episode completion
 
         while not done:
             for agent in env.agent_iter():
@@ -42,19 +43,22 @@ def train(agents, num_episodes=10, cooperative=False):
 
                 if termination or truncation:
                     done = True
-                    env.step(None)  # No action will be taken
-                    break
+                    env.step(None)  # Tell the environment no action will be taken
+                    break  # Exit agent iteration if episode ended
 
-                # Select action and step
-                action = select_action(agents[agent], observation, cooperative)
+                # Select action based on the mode (cooperative or individual)
+                action = select_action(agents[agent], observation, cooperative, other_agents=agents.values())
                 print(f"Selected Action for {agent}: {action}")
 
-                next_observation, reward, termination, truncation, _ = env.step(action)
+                env.step(action)
+
+                next_observation, reward, termination, truncation, _ = env.last()
                 total_rewards[agent] += reward
 
                 # Store experience and update agent model
                 agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
 
+                # Perform agent-specific updates
                 if isinstance(agents[agent], DQNAgent):
                     if len(agents[agent].memory) >= batch_size:
                         agents[agent].replay(batch_size)
@@ -68,6 +72,7 @@ def train(agents, num_episodes=10, cooperative=False):
                     if len(agents[agent].memory) >= batch_size:
                         agents[agent].update(batch_size)
 
+        # Log rewards
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
         print(f"Episode {episode + 1} completed with Total Rewards: {total_rewards}")
