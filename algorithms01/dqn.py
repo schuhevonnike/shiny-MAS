@@ -77,7 +77,7 @@ class DQNAgent:
             else:
                 action = torch.argmax(q_values).item()
         # Add debug prints to ensure action is valid
-        print(f"Selected action: {action}")
+        #print(f"Selected action: {action}")
         return action
 
     def remember(self, state, action, reward, next_state, done):
@@ -91,11 +91,11 @@ class DQNAgent:
         for state, action, reward, next_state, done in minibatch:
             state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
-            print(f"Shape of input tensor 'state': {state.shape}")
+            #print(f"Shape of input tensor 'state': {state.shape}")
 
             next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
             next_state = self.reshape_tensor(next_state, (1, self.input_dim))
-            print(f"Shape of input tensor 'next_state': {next_state.shape}")
+            #print(f"Shape of input tensor 'next_state': {next_state.shape}")
 
             assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
             assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
@@ -107,7 +107,7 @@ class DQNAgent:
             if not done:
                 with torch.no_grad():
                     next_state_value = self.model(next_state)
-                    print(f"Next state value shape: {next_state_value.shape}")
+                    #print(f"Next state value shape: {next_state_value.shape}")
                 target += self.gamma * torch.max(next_state_value)
 
             output = self.model(state)[0, action]
@@ -115,11 +115,11 @@ class DQNAgent:
             # Ensure target is a tensor with the same shape as output
             target = target.clone().detach().float().unsqueeze(0)
             # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
-            print(f"Shape of target tensor: {target.shape}")
+            #print(f"Shape of target tensor: {target.shape}")
 
             # Debug prints to ensure no NaNs or invalid values
             if torch.isnan(output).any() or torch.isnan(target).any():
-                print("NaN detected in output or target!")
+                #print("NaN detected in output or target!")
                 continue
 
             # Loss calculation

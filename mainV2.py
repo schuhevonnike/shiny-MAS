@@ -4,6 +4,7 @@ from environments.pettingzoo_env2 import make_env
 from algorithms01.dqn import DQNAgent
 from algorithms01.ppo import PPOAgent
 from algorithms01.sac import SACAgent
+from algorithms01.maddpg import MADDPGAgent
 from utils.training2 import train
 from utils.evaluation2 import evaluate
 
@@ -16,16 +17,16 @@ def initialize_agents(env, algorithm, mode):
 
     # Fetch the first agent from the list of possible agents to check the observation space
     first_agent = env.possible_agents[0] if len(env.possible_agents) > 0 else None
-    print(f"Environment type: {type(env)}")
-    print(f"First agent: {first_agent}")
+    #print(f"Environment type: {type(env)}")
+    #print(f"First agent: {first_agent}")
 
     # Check the observation and action space for the first agent
     obs_space = env.observation_space(first_agent) if callable(env.observation_space) else env.observation_space
     act_space = env.action_space(first_agent) if callable(env.action_space) else env.action_space
-    print(f"Observation space (first agent): {obs_space}")
-    print(f"Observation shape (first agent): {obs_space.shape}")
-    print(f"Action space (first agent): {act_space}")
-    print(f"Action shape (first agent): {act_space.shape}")
+    #print(f"Observation space (first agent): {obs_space}")
+    #print(f"Observation shape (first agent): {obs_space.shape}")
+    #print(f"Action space (first agent): {act_space}")
+    #print(f"Action shape (first agent): {act_space.shape}")
 
     if first_agent is None:
         raise AttributeError("The environment does not have any possible agents.")
@@ -47,6 +48,9 @@ def initialize_agents(env, algorithm, mode):
             print(f"Initialized PPOAgent with state size: {state_size}")
         elif algorithm == 'SAC':
             agents[agent_id] = SACAgent(state_size, action_size, cooperative=cooperative)
+            print(f"Initialized SACAgent with state size: {state_size}")
+        elif algorithm == 'MADDPG':
+            agents[agent_id] = MADDPGAgent(state_size, action_size, cooperative=cooperative)
             print(f"Initialized SACAgent with state size: {state_size}")
         # Add other agent types as necessary (e.g., MADDPG)
 
@@ -87,7 +91,6 @@ def run_experiment(env_fn, algorithm, num_episodes=10):
         print("Cooperative agents performed better.")
     else:
         print("Individual and cooperative agents performed equally well.")
-
     env.close()
 
 if __name__ == "__main__":
