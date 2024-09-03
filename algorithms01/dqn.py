@@ -113,7 +113,8 @@ class DQNAgent:
             output = self.model(state)[0, action]
 
             # Ensure target is a tensor with the same shape as output
-            target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
+            target = target.clone().detach().float().unsqueeze(0)
+            # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
             print(f"Shape of target tensor: {target.shape}")
 
             # Debug prints to ensure no NaNs or invalid values

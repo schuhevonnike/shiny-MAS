@@ -32,31 +32,12 @@ if __name__ == "__main__":
                 action = env.action_space(agent).sample() # Sample a random action
 
             next_observation, reward, done, info = env.step(action) # Execute the action and store the according values
-
+            #env.step(action)  #Option B: Only execute the action
             # Log the step result
             print(f"Step result: {next_observation}, {reward}, {done}, {info}")
 
-        for agent in env.agent_iter():
-            # Retrieve the recent observation, reward, termination, truncation, and info for the current agent
-            observation, reward, termination, truncation, info = env.last()
-            last_observations[agent] = observation  # Store the last observation
-
-            # Print the shape of the last observation
-            print(f"Last observations' shape for {agent}: {observation.shape}")
-
             if termination or truncation:
-                action = None  # No action if the agent is done
-            else:
-                action = env.action_space(agent).sample()  # Sample a random action
-
-            env.step(action)  # Execute the action
-
-            # Debugging prints to verify interactions
-            print(
-                f"Agent: {agent}, Action: {action}, Observation: {observation}, Reward: {reward}, Done: {termination or truncation}")
-
-            if termination or truncation:
-                # Reset environment if any agent's episode has ended
+            # Reset environment if any agent's episode has ended
                 observation = env.reset()
                 done = True
                 break  # Exit agent iteration loop
