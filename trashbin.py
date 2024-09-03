@@ -37,47 +37,82 @@ if __name__ == "__main__":
     env.close()
 
 #Old evaluation2.py
-import torch
-from environments.pettingzoo_env2 import make_env
-
-
-def evaluate(agents, num_episodes=100, cooperative=False):
+def evaluate(agents, num_episodes=10, cooperative=False):
     env = make_env()
     rewards_history = {agent: [] for agent in agents.keys()}
 
     for episode in range(num_episodes):
-        observation = env.reset()
+        env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
 
         for agent in env.agent_iter():
             observation, reward, termination, truncation, _ = env.last()
 
             if termination or truncation:
-                env.step(None)
+                env.step(None)  # Step with None to signify no action taken for ended agent
                 continue
 
+            # Select action based on the mode (cooperative or individual)
             with torch.no_grad():
-                observation = torch.tensor(observation, dtype=torch.float32)
-                action = torch.argmax(agents[agent](observation)).item()
+                # "Replace torch.tensor(..., dtype=...) with target = target.clone().detach().float().unsqueeze(0)"
+                # Convert float to PyTorch tensor
+                obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                # Use tensor operations
+                obs_tensor = obs_tensor.clone().detach().float().unsqueeze(0)
+                if cooperative:
+                    # Cooperative mode: choose action considering cooperative strategy
+                    action = agents[agent].act(obs_tensor)
+                else:
+                    # Individual mode: choose action independently
+                    action = torch.argmax(agents[agent].model(obs_tensor)).item()
+
             env.step(action)
 
-            reward = sum(reward.values()) if cooperative else reward[agent]
-            total_rewards[agent] += reward
+            # Update total rewards for this agent
+            if cooperative:
+                shared_reward = sum(reward.values())
+                for a in total_rewards:
+                    total_rewards[a] += shared_reward
+            else:
+                total_rewards[agent] += reward
 
-            if all(termination.values()):
-                break
-
+        # Store total rewards per agent after each episode
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
 
         print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
 
     env.close()
-    avg_rewards = {agent: sum(rewards) / num_episodes for agent, rewards in rewards_history.items()}
+
+    # Calculate average rewards for each agent
+    avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
 
 #Old training2.py:
-def train(agents, num_episodes=100, cooperative=False):
+import torch
+from environments.pettingzoo_env2 import make_env
+from algorithms01.dqn import DQNAgent
+from algorithms01.maddpg import MADDPGAgent
+from algorithms01.ppo import PPOAgent
+from algorithms01.sac import SACAgent
+
+
+def select_action(agent, observation, cooperative=False, other_agents=None):
+    with torch.no_grad():
+        if isinstance(agent, DQNAgent):
+            action = agent.act(observation)
+        elif isinstance(agent, PPOAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, SACAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, MADDPGAgent):
+            action = agent.act(observation)
+        else:
+            raise ValueError("Unknown agent type")
+    return action
+
+
+def train(agents, num_episodes=10, cooperative=False):
     env = make_env()
     # Check if `env` is an environment instance and not a wrapper object
     if not hasattr(env, 'reset') or not hasattr(env, 'step'):
@@ -88,54 +123,40 @@ def train(agents, num_episodes=100, cooperative=False):
     batch_size = 64  # Batch size, relevant for algorithms with replay memory
 
     for episode in range(num_episodes):
-        observation = env.reset()
+        env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
-        done = False
 
-        while not done:
-            actions = {}
-            for agent in env.agent_iter():
-                obs = observation[agent]
+        for agent in env.agent_iter():
+            observation, reward, termination, truncation, _ = env.last()
 
-                # Select action based on the mode (cooperative or individual)
-                action = select_action(agents[agent], obs, cooperative, other_agents=agents.values())
-                actions[agent] = action
+            if termination or truncation:
+                env.step(None)  # Tell the environment no action will be taken
+                continue
 
-            next_observation, rewards, done, _ = env.step(actions)
+            # Select action based on the mode (cooperative or individual)
+            action = select_action(agents[agent], observation, cooperative, other_agents=agents.values())
+            env.step(action)
 
-            # Collect rewards and update models
-            for agent in env.possible_agents:
-                reward = rewards[agent]
-                next_obs = next_observation[agent]
-                obs = observation[agent]
+            next_observation, reward, termination, truncation, _ = env.last()
+            total_rewards[agent] += reward
 
-                # Store experience and update agent model
-                agents[agent].remember(obs, action, reward, next_obs, done)
+            # Store experience and update agent model
+            agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
 
-                if isinstance(agents[agent], DQNAgent):
-                    # Update DQN agent
-                    if len(agents[agent].memory) >= batch_size:
-                        agents[agent].replay(batch_size)
-                elif isinstance(agents[agent], MADDPGAgent):
-                    # Update MADDPG agent
-                    if len(agents[agent].memory) >= batch_size:
-                        agents[agent].update(batch_size)
-                elif isinstance(agents[agent], PPOAgent):
-                    # Update PPO agent
-                    if len(agents[agent].memory) >= batch_size:
-                        agents[agent].update()
-                elif isinstance(agents[agent], SACAgent):
-                    # Update SAC agent
-                    if len(agents[agent].memory) >= batch_size:
-                        agents[agent].update(batch_size)
+            if isinstance(agents[agent], DQNAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].replay(batch_size)
+            elif isinstance(agents[agent], MADDPGAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update(batch_size)
+            elif isinstance(agents[agent], PPOAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update()
+            elif isinstance(agents[agent], SACAgent):
+                if len(agents[agent].memory) >= batch_size:
+                    agents[agent].update(batch_size)
 
-                total_rewards[agent] += reward
-
-            observation = next_observation
-
-            if done:
-                break
-
+        # Log rewards
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
 
@@ -143,6 +164,3 @@ def train(agents, num_episodes=100, cooperative=False):
 
     env.close()
     return rewards_history
-
-
-

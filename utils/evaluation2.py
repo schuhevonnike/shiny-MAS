@@ -9,36 +9,36 @@ def evaluate(agents, num_episodes=10, cooperative=False):
         env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
 
-        for agent in env.agent_iter():
-            observation, reward, termination, truncation, _ = env.last()
+        done = False  # Flag to manage episode completion
 
-            if termination or truncation:
-                env.step(None)  # Step with None to signify no action taken for ended agent
-                continue
+        while not done:
+            for agent in env.agent_iter():
+                observation, reward, termination, truncation, _ = env.last()
 
-            # Select action based on the mode (cooperative or individual)
-            with torch.no_grad():
-                # "Replace torch.tensor(..., dtype=...) with target = target.clone().detach().float().unsqueeze(0)"
-                # Convert float to PyTorch tensor
+                if termination or truncation:
+                    env.step(None)  # Step with None to signify no action taken for ended agent
+                    done = True  # End the episode if any agent is done
+                    break  # Exit agent iteration
+
+                # Convert observation to tensor
                 obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                # Use tensor operations
-                obs_tensor = obs_tensor.clone().detach().float().unsqueeze(0)
+
+                with torch.no_grad():
+                    if cooperative:
+                        # Cooperative mode: choose action considering cooperative strategy
+                        action = agents[agent].act(obs_tensor)
+                    else:
+                        # Individual mode: choose action independently
+                        action = torch.argmax(agents[agent].model(obs_tensor)).item()
+
+                env.step(action)
+
+                # Update total rewards for this agent
                 if cooperative:
-                    # Cooperative mode: choose action considering cooperative strategy
-                    action = agents[agent].act(obs_tensor)
+                    shared_reward = sum(reward.values())
+                    total_rewards[agent] += shared_reward
                 else:
-                    # Individual mode: choose action independently
-                    action = torch.argmax(agents[agent].model(obs_tensor)).item()
-
-            env.step(action)
-
-            # Update total rewards for this agent
-            if cooperative:
-                shared_reward = sum(reward.values())
-                for a in total_rewards:
-                    total_rewards[a] += shared_reward
-            else:
-                total_rewards[agent] += reward
+                    total_rewards[agent] += reward
 
         # Store total rewards per agent after each episode
         for agent in total_rewards:

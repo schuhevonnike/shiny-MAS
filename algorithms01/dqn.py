@@ -9,12 +9,11 @@ import random
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 64)  # Ensure state_size matches the input
+        self.fc1 = nn.Linear(state_size, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, action_size)
 
     def forward(self, x):
-        # Feed forward network using ReLU activation function
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
@@ -23,7 +22,7 @@ class DQN(nn.Module):
 class DQNAgent:
     def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
                  epsilon_decay=0.995, min_epsilon=0.01):
-        self.input_dim = state_size  # Define input_dim here
+        self.input_dim = state_size
         self.action_size = action_size
         self.gamma = gamma
         self.epsilon = epsilon
@@ -33,25 +32,53 @@ class DQNAgent:
         self.model = DQN(state_size, action_size)
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
-        self.cooperative = cooperative  # New attribute to track cooperative behavior
+        self.cooperative = cooperative
 
+    def reshape_tensor(self, tensor, desired_shape):
+        if tensor.shape != desired_shape:
+            if tensor.shape[1] < desired_shape[1]:
+                padding_size = desired_shape[1] - tensor.shape[1]
+                padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
+                tensor = torch.cat([tensor, padding], dim=1)
+            elif tensor.shape[1] > desired_shape[1]:
+                tensor = tensor[:, :desired_shape[1]]
+        return tensor
+
+    #def act(self, state, other_agents=None):
+    #    if np.random.rand() <= self.epsilon:
+    #        return random.randrange(self.action_size)
+    #    state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+    #    state = self.reshape_tensor(state, (1, self.input_dim))
+    #    q_values = self.model(state)
+
+    #    if self.cooperative and other_agents:
+    #        combined_q_values = q_values.clone()
+    #        for agent in other_agents:
+    #            combined_q_values += agent.model(state)
+    #        combined_q_values /= (1 + len(other_agents))
+    #        return torch.argmax(combined_q_values).item()
+    #    else:
+    #        return torch.argmax(q_values).item()
+
+    #Adjusted act() method
     def act(self, state, other_agents=None):
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
-
-        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        q_values = self.model(state)
-
-        if self.cooperative and other_agents:
-            # Cooperative decision making: example implementation
-            # Average Q-values with other agents (simple example)
-            combined_q_values = q_values.clone()
-            for agent in other_agents:
-                combined_q_values += agent.model(state)
-            combined_q_values /= (1 + len(other_agents))
-            return torch.argmax(combined_q_values).item()
-        else:
-            return torch.argmax(q_values).item()
+        # Ensure action is within the valid range
+        action = random.randrange(self.action_size)
+        if np.random.rand() > self.epsilon:
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = self.reshape_tensor(state, (1, self.input_dim))
+            q_values = self.model(state)
+            if self.cooperative and other_agents:
+                combined_q_values = q_values.clone()
+                for agent in other_agents:
+                    combined_q_values += agent.model(state)
+                combined_q_values /= (1 + len(other_agents))
+                action = torch.argmax(combined_q_values).item()
+            else:
+                action = torch.argmax(q_values).item()
+        # Add debug prints to ensure action is valid
+        print(f"Selected action: {action}")
+        return action
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -62,23 +89,20 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
-            state = state.clone().detach().float()
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = self.reshape_tensor(state, (1, self.input_dim))
             print(f"Shape of input tensor 'state': {state.shape}")
-            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)  # Shape: (1, state_size)
-            #next_state = next_state.clone().detach().float()
+
+            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            next_state = self.reshape_tensor(next_state, (1, self.input_dim))
             print(f"Shape of input tensor 'next_state': {next_state.shape}")
 
-            # Ensure shapes match the expected dimensions
             assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
-            assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
+            assert next_state.shape[
+                       1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
 
-            # Convert reward and done to tensors
-            reward = torch.tensor(reward, dtype=torch.float32)
-            reward = reward.clone().detach().float()
-            done = torch.tensor(done, dtype=torch.float32)
-            done = done.clone().detach().float()
+            reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
+            done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
             target = reward
 
             if not done:
@@ -91,8 +115,12 @@ class DQNAgent:
 
             # Ensure target is a tensor with the same shape as output
             target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
-            target = target.clone().detach().float().unsqueeze(0)
             print(f"Shape of target tensor: {target.shape}")
+
+            # Debug prints to ensure no NaNs or invalid values
+            if torch.isnan(output).any() or torch.isnan(target).any():
+                print("NaN detected in output or target!")
+                continue
 
             # Loss calculation
             loss = self.criterion(output, target)
