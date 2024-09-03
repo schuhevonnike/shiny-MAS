@@ -2,35 +2,39 @@ from pettingzoo.mpe import simple_tag_v3
 from pettingzoo.utils import wrappers
 
 def make_env():
-    # Load the simple_tag_v3 environment as ParallelEnv
+    # Load the simple_tag_v3 environment
     env = simple_tag_v3.env()
-
-    # Apply wrappers that are compatible with AEC environments
+    # Apply wrappers compatible with AEC environments
     env = wrappers.OrderEnforcingWrapper(env)
     return env
 
 if __name__ == "__main__":
     env = make_env()
+    env.reset()  # Initialize the environment
+    print("Environment initialized")
 
-    # Initialize the environment and get initial observations
-    env.reset()
-    print(f"Environment initialized")  # Debugging print to verify output
+    # Dictionary to store the last observation for each agent
+    last_observations = {}
 
-    #agent_iter() is a method used to iterate over all possible agents
+    # Main interaction loop
     for agent in env.agent_iter():
-        #Retrieve obs, rew and further info from the previous agent/step
+        # Get the last observation, reward, termination, truncation, and info for the current agent
         observation, reward, termination, truncation, info = env.last()
+        last_observations[agent] = observation  # Store the last observation
 
         if termination or truncation:
-            action = None
+            action = None  # No action if the agent is done
         else:
-            action = env.action_space(agent).sample()  # Take random actions
+            action = env.action_space(agent).sample()  # Sample a random action
 
-        # Execute the action
-        env.step(action)  # Do not unpack, as step does not return anything
+        env.step(action)  # Execute the action
 
+        # Reset environment if any agent's episode has ended
         if termination or truncation:
-            env.reset()  # Reset the environment for the next episode
+            env.reset()
 
-    env.render()  # Adjust render mode as needed
+        # Debugging prints to verify interactions
+        print(f"Agent: {agent}, Action: {action}, Observation: {observation}, Reward: {reward}, Done: {termination or truncation}")
+
+    env.render()  # Render the environment
     env.close()
