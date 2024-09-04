@@ -106,8 +106,8 @@ class DQNAgent:
         # Ensure action is within the valid range
         action = random.randrange(self.action_size)
         if np.random.rand() > self.epsilon:
-            state = state.clone().detach().requires_grad_(True)
-            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            #state = state.clone().detach().requires_grad_(True) # Is recommended, but throws an error
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
             q_values = self.model(state)
             if self.cooperative and other_agents:
