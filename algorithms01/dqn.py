@@ -115,8 +115,7 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-            state = state.clone().detach().float().unsqueeze(0)
-            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
             #print(f"Shape of input tensor 'state': {state.shape}")
 
