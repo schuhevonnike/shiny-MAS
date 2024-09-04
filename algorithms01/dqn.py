@@ -126,10 +126,10 @@ class DQNAgent:
             assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
             assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
 
-            reward = reward.clone().detach().unsqueeze(0)
-            #reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
-            done = done.clone().detach().unsqueeze(0)
-            #done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
+            #reward = reward.clone().detach().float().unsqueeze(0)
+            reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
+            #done = done.clone().detach().float().unsqueeze(0)
+            done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
             target = reward
 
             if not done:
