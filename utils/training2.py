@@ -40,6 +40,7 @@ def train(agents, num_episodes=10, cooperative=False):
             while not done:
                 for agent in env.agent_iter():
                     step_start_time = time.time()
+                    # Problem: Agent_0's Beobachtungen haben die Dimension 1x14 anstatt 1x16 wie die übrigen Agenten (Adversaries)
                     observation, reward, termination, truncation, _ = env.last()
                     print(f"Agent: {agent}, Observation: {observation}, Reward: {reward}")
 
@@ -50,6 +51,7 @@ def train(agents, num_episodes=10, cooperative=False):
 
                     # Select action based on the mode (cooperative or individual)
                     action = select_action(agents[agent], observation, cooperative, other_agents=agents.values())
+                    # action enthält tatsächlich eine Handlung des Agenten basierend auf dem Modus und seinen Beobachtungen
                     print(f"Selected Action for {agent}: {action}")
 
                     env.step(action)

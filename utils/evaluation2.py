@@ -8,7 +8,6 @@ def evaluate(agents, num_episodes=10, cooperative=False):
     for episode in range(num_episodes):
         env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
-
         done = False  # Flag to manage episode completion
 
         while not done:

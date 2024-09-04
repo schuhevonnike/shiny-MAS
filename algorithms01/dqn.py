@@ -34,16 +34,42 @@ class DQNAgent:
         self.criterion = nn.MSELoss()
         self.cooperative = cooperative
 
+    # Manually added method to reshape tensors to avoid DimensionMismatch (old, misfunctional version)
+    #def reshape_tensor(self, tensor, desired_shape):
+    #    if tensor.shape != desired_shape:
+    #        if tensor.shape[1] < desired_shape[1]:
+    #            padding_size = desired_shape[1] - tensor.shape[1]
+    #            padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
+    #            tensor = torch.cat([tensor, padding], dim=1)
+    #        elif tensor.shape[1] > desired_shape[1]:
+    #            tensor = tensor[:, :desired_shape[1]]
+    #    return tensor
+
+    # New, reformulated reshape_tensor() method
     def reshape_tensor(self, tensor, desired_shape):
-        if tensor.shape != desired_shape:
-            if tensor.shape[1] < desired_shape[1]:
-                padding_size = desired_shape[1] - tensor.shape[1]
-                padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
-                tensor = torch.cat([tensor, padding], dim=1)
-            elif tensor.shape[1] > desired_shape[1]:
-                tensor = tensor[:, :desired_shape[1]]
+        # Ensure that the number of dimensions is the same
+        if tensor.dim() != len(desired_shape):
+            raise ValueError(
+                f"Tensor has {tensor.dim()} dimensions but desired shape requires {len(desired_shape)} dimensions.")
+
+        # Process each dimension independently
+        for i in range(len(desired_shape)):
+            if tensor.shape[i] < desired_shape[i]:
+                # Padding for the current dimension
+                padding_size = desired_shape[i] - tensor.shape[i]
+                pad_shape = list(tensor.shape)
+                pad_shape[i] = padding_size
+                padding = torch.zeros(*pad_shape, dtype=tensor.dtype)
+                tensor = torch.cat([tensor, padding], dim=i)
+            elif tensor.shape[i] > desired_shape[i]:
+                # Trimming for the current dimension
+                slices = [slice(None)] * len(tensor.shape)
+                slices[i] = slice(0, desired_shape[i])
+                tensor = tensor[tuple(slices)]
+
         return tensor
 
+    # Old, initial act() method:
     #def act(self, state, other_agents=None):
     #    if np.random.rand() <= self.epsilon:
     #        return random.randrange(self.action_size)
@@ -60,7 +86,7 @@ class DQNAgent:
     #    else:
     #        return torch.argmax(q_values).item()
 
-    #Adjusted act() method
+    #Adjusted act() method:
     def act(self, state, other_agents=None):
         # Ensure action is within the valid range
         action = random.randrange(self.action_size)
@@ -89,7 +115,8 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = state.clone().detach().float().unsqueeze(0)
+            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
             #print(f"Shape of input tensor 'state': {state.shape}")
 
@@ -100,8 +127,10 @@ class DQNAgent:
             assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
             assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
 
-            reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
-            done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
+            reward = reward.clone().detach().float().unsqueeze(0)
+            #reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
+            done = done.clone().detach().float().unsqueeze(0)
+            #done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
             target = reward
 
             if not done:

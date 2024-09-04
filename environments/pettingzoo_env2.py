@@ -31,13 +31,13 @@ if __name__ == "__main__":
             else:
                 action = env.action_space(agent).sample() # Sample a random action
 
-            # Hier aktuelles Problem: observations und actions werden scheinbar als 'None' zwischengespeichert.
+            # Aktuelles Problem: observations und actions werden scheinbar als 'None' zwischengespeichert. => Step result: None
 
-            #next_observation, reward, done, info = env.step(action) # Execute the action and store the according values
-            env.step(action)  #Option B: Only execute the action
-            # Log the step result
-            #print(f"Step result: {next_observation}, {reward}, {done}, {info}")
-            print(f"Step result: {env.step(action)}")
+            next_observation, reward, done, info = env.step(action) # Option A: Execute the action and store the according values
+            #env.step(action)  #Option B: Only execute the action
+            # Log the step result using print statements
+            print(f"Step result: {next_observation}, {reward}, {done}, {info}")
+            #print(f"Step result: {env.step(action)}")
 
             if termination or truncation:
             # Reset environment if any agent's episode has ended
