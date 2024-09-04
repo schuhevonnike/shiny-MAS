@@ -45,27 +45,42 @@ class DQNAgent:
     #            tensor = tensor[:, :desired_shape[1]]
     #    return tensor
 
-    # New, reformulated reshape_tensor() method
-    def reshape_tensor(self, tensor, desired_shape):
+    #def reshape_tensor(self, tensor, desired_shape):
         # Ensure that the number of dimensions is the same
-        if tensor.dim() != len(desired_shape):
-            raise ValueError(
-                f"Tensor has {tensor.dim()} dimensions but desired shape requires {len(desired_shape)} dimensions.")
+    #    if tensor.dim() != len(desired_shape):
+    #        raise ValueError(
+    #            f"Tensor has {tensor.dim()} dimensions but desired shape requires {len(desired_shape)} dimensions.")
 
         # Process each dimension independently
-        for i in range(len(desired_shape)):
-            if tensor.shape[i] < desired_shape[i]:
-                # Padding for the current dimension
-                padding_size = desired_shape[i] - tensor.shape[i]
-                pad_shape = list(tensor.shape)
-                pad_shape[i] = padding_size
-                padding = torch.zeros(*pad_shape, dtype=tensor.dtype)
-                tensor = torch.cat([tensor, padding], dim=i)
-            elif tensor.shape[i] > desired_shape[i]:
-                # Trimming for the current dimension
-                slices = [slice(None)] * len(tensor.shape)
-                slices[i] = slice(0, desired_shape[i])
-                tensor = tensor[tuple(slices)]
+    #    for i in range(len(desired_shape)):
+    #        if tensor.shape[i] < desired_shape[i]:
+    #            # Padding for the current dimension
+    #            padding_size = desired_shape[i] - tensor.shape[i]
+    #            pad_shape = list(tensor.shape)
+    #            pad_shape[i] = padding_size
+    #            padding = torch.zeros(*pad_shape, dtype=tensor.dtype)
+    #            tensor = torch.cat([tensor, padding], dim=i)
+    #        elif tensor.shape[i] > desired_shape[i]:
+    #            # Trimming for the current dimension
+    #            slices = [slice(None)] * len(tensor.shape)
+    #            slices[i] = slice(0, desired_shape[i])
+    #            tensor = tensor[tuple(slices)]
+
+    #    return tensor
+
+    # New, reformulated reshape_tensor() method
+    def reshape_tensor(self, tensor, desired_shape):
+        if len(desired_shape) == 2 and tensor.dim() > 2:
+            # Flatten the tensor except for the batch dimension
+            tensor = tensor.view(tensor.size(0), -1)
+
+        if tensor.shape != desired_shape:
+            if tensor.shape[1] < desired_shape[1]:
+                padding_size = desired_shape[1] - tensor.shape[1]
+                padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
+                tensor = torch.cat([tensor, padding], dim=1)
+            elif tensor.shape[1] > desired_shape[1]:
+                tensor = tensor[:, :desired_shape[1]]
 
         return tensor
 
