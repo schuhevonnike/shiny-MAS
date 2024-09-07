@@ -1,12 +1,14 @@
 import torch
+import pandas as pd
 from environments.pettingzoo_env2 import make_env
 
 def evaluate(agents, num_episodes=10, cooperative=False):
     env = make_env()
     rewards_history = {agent: [] for agent in agents.keys()}
+    data_records = {agent: [] for agent in agents.keys()} # Dicts for later evaluation with pandas
 
     for episode in range(num_episodes):
-        env.reset()
+        env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         done = False  # Flag to manage episode completion
 
@@ -19,25 +21,28 @@ def evaluate(agents, num_episodes=10, cooperative=False):
                     done = True  # End the episode if any agent is done
                     break  # Exit agent iteration
 
-                # Convert observation to tensor
                 obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
 
                 with torch.no_grad():
                     if cooperative:
-                        # Cooperative mode: choose action considering cooperative strategy
                         action = agents[agent].act(obs_tensor)
                     else:
-                        # Individual mode: choose action independently
                         action = torch.argmax(agents[agent].model(obs_tensor)).item()
 
                 env.step(action)
 
                 # Update total rewards for this agent
                 if cooperative:
-                    shared_reward = sum(reward.values())
+                    # Aggregate total rewards from all agents for cooperative mode
+                    shared_reward = sum(sum(rewards) for rewards in rewards_history.values())
                     total_rewards[agent] += shared_reward
                 else:
                     total_rewards[agent] += reward
+
+        # Note: Die Antwort für die vom Zahlenwert 10 abweichenden Belohnungen liegt in der simple_tag.py:
+        # "Adversary reward can optionally be shaped (decreased reward for increased distance from agents)
+        # (Good) agent reward can " (increased reward for increased distance from adversary)."
+        # Note: Dass der "good_agent" nach wie vor positive Belohnungen (besonders +10) erhalten kann ist nach wie vor merkwürdig
 
         # Store total rewards per agent after each episode
         for agent in total_rewards:
@@ -48,5 +53,6 @@ def evaluate(agents, num_episodes=10, cooperative=False):
     env.close()
 
     # Calculate average rewards for each agent
+    #Something about this is fishy
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
-    return avg_rewards
+    return rewards_history, avg_rewards

@@ -43,20 +43,33 @@ def initialize_agents(env, algorithm, mode):
         action_size = env.action_space(agent_id).n
         print(f"Action size inferred: {action_size}")
 
-        cooperative = (mode == 'cooperative')  # Determine if agents should be cooperative
-        if algorithm == 'DQN':
-            agents[agent_id] = DQNAgent(state_size, action_size, cooperative=cooperative)
-            print(f"Initialized DQNAgent with state size: {state_size}")
-        elif algorithm == 'PPO':
-            agents[agent_id] = PPOAgent(state_size, action_size, cooperative=cooperative)
-            print(f"Initialized PPOAgent with state size: {state_size}")
-        elif algorithm == 'SAC':
-            agents[agent_id] = SACAgent(state_size, action_size, cooperative=cooperative)
-            print(f"Initialized SACAgent with state size: {state_size}")
-        elif algorithm == 'MADDPG':
-            agents[agent_id] = MADDPGAgent(state_size, action_size, cooperative=cooperative)
-            print(f"Initialized SACAgent with state size: {state_size}")
-        # Add other agent types as necessary (e.g., MADDPG)
+        if mode == 'cooperative':
+            #cooperative = (mode == 'cooperative')  # Introduce new boolean to annotate agents behaviour
+            if algorithm == 'DQN':
+                agents[agent_id] = DQNAgent(state_size, action_size, mode)
+                print(f"Initialized cooperative DQNAgent with state size: {state_size}")
+            elif algorithm == 'PPO':
+                agents[agent_id] = PPOAgent(state_size, action_size, mode)
+                print(f"Initialized cooperative PPOAgent with state size: {state_size}")
+            elif algorithm == 'SAC':
+                agents[agent_id] = SACAgent(state_size, action_size, mode)
+                print(f"Initialized cooperative SACAgent with state size: {state_size}")
+            elif algorithm == 'MADDPG':
+                agents[agent_id] = MADDPGAgent(state_size, action_size, mode)
+                print(f"Initialized cooperative SACAgent with state size: {state_size}")
+        elif mode == 'individual':
+            if algorithm == 'DQN':
+                agents[agent_id] = DQNAgent(state_size, action_size, mode)
+                print(f"Initialized individual DQNAgent with state size: {state_size}")
+            elif algorithm == 'PPO':
+                agents[agent_id] = PPOAgent(state_size, action_size, mode)
+                print(f"Initialized individual PPOAgent with state size: {state_size}")
+            elif algorithm == 'SAC':
+                agents[agent_id] = SACAgent(state_size, action_size, mode)
+                print(f"Initialized individual SACAgent with state size: {state_size}")
+            elif algorithm == 'MADDPG':
+                agents[agent_id] = MADDPGAgent(state_size, action_size, mode)
+                print(f"Initialized individual SACAgent with state size: {state_size}")
     return agents
 
 def run_experiment(env_fn, algorithm, num_episodes):
@@ -88,18 +101,24 @@ def run_experiment(env_fn, algorithm, num_episodes):
     print(f"Average Rewards (Individual): {avg_rewards_individual}")
     print(f"Average Rewards (Cooperative): {avg_rewards_cooperative}")
 
-    if avg_rewards_individual > avg_rewards_cooperative:
+    # Calculate the sum of average rewards for individual and cooperative agents
+    sum_avg_rewards_individual = sum(avg_rewards_individual.values())
+    sum_avg_rewards_cooperative = sum(avg_rewards_cooperative.values())
+
+    # Now compare the summed average rewards
+    if sum_avg_rewards_individual > sum_avg_rewards_cooperative:
         print("Individual agents performed better.")
-    elif avg_rewards_individual < avg_rewards_cooperative:
+    elif sum_avg_rewards_individual < sum_avg_rewards_cooperative:
         print("Cooperative agents performed better.")
     else:
         print("Individual and cooperative agents performed equally well.")
+
     env.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison")
     parser.add_argument('--algorithm', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
-    parser.add_argument('--num_episodes', type=int, default=10, help='Number of episodes for training')
+    parser.add_argument('--num_episodes', type=int, default=4, help='Number of episodes for training each group of agents')
 
     args = parser.parse_args()
 

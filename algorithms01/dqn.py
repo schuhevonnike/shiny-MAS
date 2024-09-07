@@ -81,7 +81,6 @@ class DQNAgent:
                 tensor = torch.cat([tensor, padding], dim=1)
             elif tensor.shape[1] > desired_shape[1]:
                 tensor = tensor[:, :desired_shape[1]]
-
         return tensor
 
     # Old, initial act() method:
@@ -105,11 +104,13 @@ class DQNAgent:
     def act(self, state, other_agents=None):
         # Ensure action is within the valid range
         action = random.randrange(self.action_size)
+        #Epsilon-greedy
         if np.random.rand() > self.epsilon:
             #state = state.clone().detach().requires_grad_(True) # Is recommended, but throws an error
             state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
             q_values = self.model(state)
+            # if-check for cooperative behaviour, needs fine-tuning
             if self.cooperative and other_agents:
                 combined_q_values = q_values.clone()
                 for agent in other_agents:
@@ -167,7 +168,7 @@ class DQNAgent:
                 continue
 
             # Loss calculation
-            loss = self.criterion(output, target)
+            loss = self.criterion(output.reshape(1,-1), target)
 
             # Optimization step
             self.optimizer.zero_grad()

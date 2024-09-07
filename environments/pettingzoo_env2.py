@@ -1,18 +1,21 @@
 from pettingzoo.mpe import simple_tag_v3
+from pettingzoo.classic import rps_v2
 from pettingzoo.utils import wrappers
 
 
 def make_env():
     # Load the simple_tag_v3 environment
-    env = simple_tag_v3.env()
-    # Apply wrappers compatible with AEC environments
-    env = wrappers.OrderEnforcingWrapper(env)
-    return env
+    env = simple_tag_v3.raw_env()
+    # Apply wrappers compatible with AEC environments, check PettingZoo Docs for further info
+    #env = wrappers.BaseWrapper(env)
 
+    # Beobachtung: Die Reihenfolge der Entscheidungsfindung gelingt auch ohne OrderEnforcingWrapper (adv_0 -> adv_1 -> adv_2 -> agent_0 -> adv_0)
+    #env = wrappers.OrderEnforcingWrapper(env)
+    return env
 
 if __name__ == "__main__":
     env = make_env()
-    observation = env.reset()  # Initialize the environment
+    observation = env.reset(seed=42)  # Initialize the environment
     print(f"Initial observation after reset: {observation}")
 
     # Dictionary to store the last observation for each agent in the iteration
@@ -31,17 +34,15 @@ if __name__ == "__main__":
             else:
                 action = env.action_space(agent).sample() # Sample a random action
 
-            # Aktuelles Problem: observations und actions werden scheinbar als 'None' zwischengespeichert. => Step result: None
-
             next_observation, reward, done, info = env.step(action) # Option A: Execute the action and store the according values
             #env.step(action)  #Option B: Only execute the action
             # Log the step result using print statements
-            print(f"Step result: {next_observation}, {reward}, {done}, {info}")
+            #print(f"Step result: {next_observation}, {reward}, {done}, {info}")
             #print(f"Step result: {env.step(action)}")
 
             if termination or truncation:
             # Reset environment if any agent's episode has ended
-                observation = env.reset()
+                observation = env.reset(seed=42)
                 done = True
                 break  # Exit agent iteration loop
 
