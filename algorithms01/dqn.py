@@ -106,8 +106,8 @@ class DQNAgent:
         action = random.randrange(self.action_size)
         #Epsilon-greedy
         if np.random.rand() > self.epsilon:
-            #state = state.clone().detach().requires_grad_(True) # Is recommended, but throws an error
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = torch.tensor(state, dtype=torch.float32).clone().detach().unsqueeze(0)
+            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
             state = self.reshape_tensor(state, (1, self.input_dim))
             q_values = self.model(state)
             # if-check for cooperative behaviour, needs fine-tuning
@@ -126,7 +126,7 @@ class DQNAgent:
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
-    def replay(self, batch_size=32):
+    def update(self, batch_size=32):
         if len(self.memory) < batch_size:
             return
 

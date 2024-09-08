@@ -1,3 +1,4 @@
+import os
 import time
 import torch
 import pandas as pd
@@ -8,7 +9,6 @@ from algorithms01.ppo import PPOAgent
 from algorithms01.sac import SACAgent
 
 def select_action(agent, observation, cooperative=False, other_agents=None):
-    # Tipp: Diese Instanzen sind unnötig, besser ist es, diese Checks bei den einzelnen Lernalgorithmen mit einzubinden
     with torch.no_grad():
         if isinstance(agent, DQNAgent):
             action = agent.act(observation)
@@ -25,98 +25,91 @@ def select_action(agent, observation, cooperative=False, other_agents=None):
 def train(agents, num_episodes=10, cooperative=False):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
-    data_records = {agent: {'episode': [], 'observation': [], 'action': [], 'reward': [], 'next_observation': [], 'done': [],'step_duration': []} for agent in agents}
-    gamma = 0.99  # Discount factor, adjustable based on algorithm
-    batch_size = 64  # Batch size, relevant for algorithms with replay memory
-    # Check if `env` is an environment instance and not a wrapper object
+    data_records = []  # List to store records per step
+    total_cooperative_rewards = []  # Track cooperative rewards
+
     if not hasattr(env, 'reset') or not hasattr(env, 'step'):
         raise TypeError("Provided env is not a valid environment instance")
 
     for episode in range(num_episodes):
         episode_start_time = time.time()
-        env.reset() # Returns NoneType
+        env.reset()
         total_rewards = {agent: 0 for agent in env.possible_agents}
-        print(f"Episode {episode + 1}/{num_episodes} started.")
+        done = False
+        step = 0  # Initialize step counter for each episode
 
-        done = False  # Flag to manage episode completion
-        try:
-            while not done:
-                # For loop over all possible Agents
-                for agent in env.agent_iter():
-                    step_start_time = time.time()
-                    observation, reward, termination, truncation, _ = env.last()
-                    print(f"Agent: {agent}, Observation: {observation}, Reward: {reward}")
+        while not done:
+            step += 1
+            for agent in env.possible_agents:
+            #for agent in env.agent_iter():
+                observation, reward, termination, truncation, _ = env.last()
 
-                    if termination or truncation:
-                        done = True
-                        env.step(None)  # Tell the environment no action will be taken
-                        break  # Exit agent iteration if episode ended
+            if termination or truncation:
+                done = True
+                env.step(None)
+                break
 
-                    # Select action based on the mode (cooperative or individual)
-                    action = select_action(agents[agent], observation, cooperative=False, other_agents=agents.values())
-                    print(f"Selected Action for {agent}: {action}")
-                    #data[agent].append
-                    env.step(action)
 
-                    next_observation, reward, termination, truncation, _ = env.last()
+            #obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
 
-                    total_rewards[agent] += reward
 
-                    # Timing the agent's memory and update operations
-                    agent_start_time = time.time()
+            action = select_action(agents[agent], observation, cooperative=cooperative, other_agents=agents.values())
+            env.step(action)
+            next_observation, reward, termination, truncation, _ = env.last()
 
-                    # Store data in the dictionary
-                    data_records[agent]['episode'].append(episode + 1)
-                    data_records[agent]['observation'].append(observation)
-                    data_records[agent]['action'].append(action)
-                    data_records[agent]['reward'].append(reward)
-                    data_records[agent]['next_observation'].append(next_observation)
-                    data_records[agent]['done'].append(termination or truncation)
-                    data_records[agent]['step_duration'].append(time.time() - step_start_time)
+            # Update rewards
+            total_rewards[agent] += reward
 
-                    # Store experience and update agent model
-                    agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
+            # Store step data in the list
+            data_records.append({
+                'Episode': episode + 1,
+                'Step': step,
+                'Agent': agent,
+                'Mode': 'cooperative' if cooperative else 'individual',
+                'Action': action,
+                'Observation': observation,
+                'Next Observation': next_observation,
+                'Reward': reward,
+                'Total Reward': total_rewards[agent],
+                'Cooperative Reward': sum(total_rewards.values()) if cooperative else 0,
+                'Done': termination or truncation,
+                'Step Duration': time.time() - episode_start_time
+            })
 
-                    # Perform agent-specific updates => sollte in die einzelnen Lernalgorithmen implementiert werden
-                    if isinstance(agents[agent], DQNAgent):
-                        if len(agents[agent].memory) >= batch_size:
-                            agents[agent].replay(batch_size)
-                    elif isinstance(agents[agent], MADDPGAgent):
-                        if len(agents[agent].memory) >= batch_size:
-                            agents[agent].update(batch_size)
-                    elif isinstance(agents[agent], PPOAgent):
-                        if len(agents[agent].memory) >= batch_size:
-                            agents[agent].update()
-                    elif isinstance(agents[agent], SACAgent):
-                        if len(agents[agent].memory) >= batch_size:
-                            agents[agent].update(batch_size)
-                        # Time taken for agent operations
-                        print(f"Agent {agent} operation took {time.time() - agent_start_time:.2f} seconds")
-                    # Time taken for a single environment step
-                    print(f"Step operation took {time.time() - step_start_time:.2f} seconds")
-                # Timing the end of an episode
-                print(f"Episode {episode + 1} completed in {time.time() - episode_start_time:.2f} seconds with Total Rewards: {total_rewards}")
-                # Log rewards
+            # Store experience and update agent model
+            agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
+
+            # Update agent if it has enough experience (for agents with replay memory)
+            if len(agents[agent].memory) >= 64:  # Using batch size 64 for example
+                agents[agent].update(64)
+        env.close()
+
+        # End of episode logging
+        if cooperative:
+            shared_reward = sum(total_rewards.values())
+            total_cooperative_rewards.append(shared_reward)
+            print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+            #print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {shared_reward}")
+        else:
             for agent in total_rewards:
                 rewards_history[agent].append(total_rewards[agent])
-
-        except KeyboardInterrupt:
-            print("Training interrupted by user.")
-        finally:
             print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
-            env.close()
 
-    # Convert data_records to pandas DataFrame
-    all_agent_data = []
-    for agent, data in data_records.items():
-        df_agent = pd.DataFrame(data)
-        df_agent['agent'] = agent  # Add a column for the agent
-        all_agent_data.append(df_agent)
+    # Convert records to a DataFrame and save to CSV
+    df_eval = pd.DataFrame(data_records)
 
-    df_eval = pd.concat(all_agent_data, ignore_index=True)
-    df_eval.to_csv('evaluation_data.csv', index=False)  # Save evaluation data to CSV for analysis
+    # Ensure a directory for saving exists
+    if not os.path.exists('evaluation_data'):
+        os.makedirs('evaluation_data')
 
-    # Calculate average rewards for each agent
-    avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+    # Save to CSV
+    df_eval.to_csv('evaluation_data/training_data.csv', index=False)
+    print(f"Data saved to evaluation_data/training_data.csv")
+
+    # Calculate average rewards for each agent or cooperative rewards
+    if cooperative:
+        avg_rewards = sum(total_cooperative_rewards) / len(total_cooperative_rewards)
+    else:
+        avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+
     return avg_rewards
-    #return rewards_history
