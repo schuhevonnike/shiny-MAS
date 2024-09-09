@@ -58,8 +58,7 @@ def run_experiment(env_fn, algorithm, num_episodes):
 
     # Evaluate agents
     print("Evaluating Individual Agents:")
-    rewards_history_individual, avg_rewards_individual, _ = evaluate(agents_individual, num_episodes=num_episodes,
-                                                                     cooperative=False)
+    rewards_history_individual, avg_rewards_individual, _ = evaluate(agents_individual, num_episodes=num_episodes, cooperative=False)
 
     print("Evaluating Cooperative Agents:")
     _, _, avg_rewards_cooperative = evaluate(agents_cooperative, num_episodes=num_episodes, cooperative=True)
@@ -84,7 +83,6 @@ def run_experiment(env_fn, algorithm, num_episodes):
         print("Cooperative agents performed better.")
     else:
         print("Individual and cooperative agents performed equally well.")
-
     env.close()
 
 

@@ -37,6 +37,7 @@ if __name__ == "__main__":
     env.close()
 
 #08.09.24 - old evaluation2.py
+
 import torch
 import pandas as pd
 from environments.pettingzoo_env2 import make_env
@@ -646,4 +647,391 @@ def run_experiment(env_fn, algorithm, num_episodes):
 
     env.close()
 
-#08.09.24
+#09.09.24
+
+def evaluate(agents, num_episodes=10, cooperative=False):
+    env = make_env()
+    rewards_history = {agent: [] for agent in agents.keys()}  # Individual rewards
+    total_cooperative_rewards = []  # Cooperative rewards
+    data_records = []  # List for step-by-step evaluation data
+
+    for episode in range(num_episodes):
+        #episode_start_time = time.time()
+        env.reset(seed=42)
+        total_rewards = {agent: 0 for agent in env.possible_agents}
+        done = False
+        #step = 0
+
+        while not done:
+            #step += 1
+            #for agent in env.agent_iter():
+            for agent in env.possible_agents:
+                observation, reward, termination, truncation, _ = env.last()
+
+                if termination or truncation:
+                    env.step(None)  # No action taken for terminated agents
+                    done = True
+                    break
+
+                obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+
+                with torch.no_grad():
+                    if cooperative:
+                        action = agents[agent].act(obs_tensor)
+                    else:
+                        action = torch.argmax(agents[agent].model(obs_tensor)).item()
+
+                env.step(action)
+
+                # Update rewards
+                total_rewards[agent] += reward
+
+                next_observation, reward, termination, truncation, _ = env.last()
+
+                # Store step data
+                data_records.append({
+                    'Episode': episode + 1,
+                    #'Step': step,
+                    'Agent': agent,
+                    'Mode': 'cooperative' if cooperative else 'individual',
+                    'Action': action,
+                    'Observation': observation,
+                    'Next Observation': next_observation,
+                    'Reward': reward,
+                    'Total Reward': total_rewards[agent],
+                    'Cooperative Reward': sum(total_rewards.values()) if cooperative else 0,
+                    'Done': termination or truncation,
+                    #'Step Duration': time.time() - episode_start_time
+                })
+
+            if cooperative:
+                # Track cooperative rewards
+                total_shared_reward = sum(total_rewards.values())
+                total_cooperative_rewards.append(total_shared_reward)
+                print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+                #print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_shared_reward}")
+            else:
+                # Track individual rewards
+                for agent in total_rewards:
+                    rewards_history[agent].append(total_rewards[agent])
+                    print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+
+        # Convert records to a DataFrame and save to CSV
+        df_eval = pd.DataFrame(data_records)
+
+        # Ensure directory exists for saving
+        if not os.path.exists('evaluation_data'):
+            os.makedirs('evaluation_data')
+
+        # Save evaluation data to CSV
+        df_eval.to_csv('evaluation_data/evaluation_data.csv', index=False)
+        print(f"Evaluation data saved to evaluation_data/evaluation_data.csv")
+    env.close()
+
+    # Calculate average rewards
+    if not cooperative:
+        avg_rewards_individual = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+        avg_rewards_cooperative = None
+    else:
+        avg_rewards_individual = None
+        avg_rewards_cooperative = sum(total_cooperative_rewards) / len(total_cooperative_rewards)
+
+    return rewards_history, avg_rewards_individual, avg_rewards_cooperative
+
+#09.09.24 - working fine, yet training rewards are off for advesary_2.
+
+import os
+#import time
+import torch
+import pandas as pd
+from environments.pettingzoo_env2 import make_env
+from algorithms01.dqn import DQNAgent
+from algorithms01.maddpg import MADDPGAgent
+from algorithms01.ppo import PPOAgent
+from algorithms01.sac import SACAgent
+
+def select_action(agent, observation, cooperative=False, other_agents=None):
+    with torch.no_grad():
+        if isinstance(agent, DQNAgent):
+            action = agent.act(observation)
+        elif isinstance(agent, PPOAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, SACAgent):
+            action, _ = agent.act(observation)
+        elif isinstance(agent, MADDPGAgent):
+            action = agent.act(observation)
+        else:
+            raise ValueError("Unknown agent type")
+    return action
+
+def train(agents, num_episodes=10, cooperative=False):
+    env = make_env()
+    rewards_history = {agent: [] for agent in agents}
+    data_records = []  # List to store records per step
+    total_cooperative_rewards = []  # Track cooperative rewards
+
+    if not hasattr(env, 'reset') or not hasattr(env, 'step'):
+        raise TypeError("Provided env is not a valid environment instance")
+
+    for episode in range(num_episodes):
+        #episode_start_time = time.time()
+        env.reset(seed=42)
+        total_rewards = {agent: 0 for agent in env.possible_agents}
+        done = False
+        step = 0  # Initialize step counter for each episode
+
+        while not done:
+            step += 1
+            for agent in env.possible_agents:
+            #for agent in env.agent_iter():
+                observation, reward, termination, truncation, _ = env.last()
+
+                #obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+
+                action = select_action(agents[agent], observation, cooperative=cooperative, other_agents=agents.values())
+
+                env.step(action)
+                next_observation, reward, termination, truncation, _ = env.last()
+
+                # Update rewards
+                total_rewards[agent] += reward
+
+                if termination or truncation:
+                    done = True
+                    env.step(None)
+                    break
+
+                agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
+
+                # Store step data in the list
+                data_records.append({
+                    'Episode': episode + 1,
+                    'Step': step,
+                    'Agent': agent,
+                    'Mode': 'cooperative' if cooperative else 'individual',
+                    'Action': action,
+                    'Observation': observation,
+                    'Next Observation': next_observation,
+                    'Reward': reward,
+                    'Total Reward': total_rewards[agent],
+                    'Cooperative Reward': sum(total_rewards.values()) if cooperative else 0,
+                    'Done': termination or truncation,
+                    #'Step Duration': time.time() - episode_start_time
+                })
+
+                # Update agent if it has enough experience (for agents with replay memory)
+                if len(agents[agent].memory) >= 64:  # Using batch size 64 for example
+                    agents[agent].update(64)
+        env.close()
+
+        # End of episode logging
+        if cooperative:
+            shared_reward = sum(total_rewards.values())
+            total_cooperative_rewards.append(shared_reward)
+            print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+            #print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {shared_reward}")
+        else:
+            for agent in total_rewards:
+                rewards_history[agent].append(total_rewards[agent])
+            print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+
+        # Convert records to a DataFrame and save to CSV
+        df_eval = pd.DataFrame(data_records)
+
+        # Ensure a directory for saving exists
+        if not os.path.exists('evaluation_data'):
+            os.makedirs('evaluation_data')
+
+        # Save to CSV
+        df_eval.to_csv('evaluation_data/training_data.csv', index=False)
+    print(f"Training data saved to evaluation_data/training_data.csv")
+
+    # Calculate average rewards for each agent or cooperative rewards
+    if cooperative:
+        avg_rewards = sum(total_cooperative_rewards) / len(total_cooperative_rewards)
+    else:
+        avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+
+    return avg_rewards
+
+#09.09.24
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+from collections import deque
+import random
+
+
+class DQN(nn.Module):
+    def __init__(self, state_size, action_size):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(state_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, action_size)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
+
+
+class DQNAgent:
+    def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
+                 epsilon_decay=0.995, min_epsilon=0.01):
+        self.input_dim = state_size
+        self.action_size = action_size
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
+        self.min_epsilon = min_epsilon
+        self.memory = deque(maxlen=2000)
+        self.model = DQN(state_size, action_size)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.criterion = nn.MSELoss()
+        self.cooperative = cooperative
+
+    # Manually added method to reshape tensors to avoid DimensionMismatch (old, misfunctional version)
+    #def reshape_tensor(self, tensor, desired_shape):
+    #    if tensor.shape != desired_shape:
+    #        if tensor.shape[1] < desired_shape[1]:
+    #            padding_size = desired_shape[1] - tensor.shape[1]
+    #            padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
+    #            tensor = torch.cat([tensor, padding], dim=1)
+    #        elif tensor.shape[1] > desired_shape[1]:
+    #            tensor = tensor[:, :desired_shape[1]]
+    #    return tensor
+
+    #def reshape_tensor(self, tensor, desired_shape):
+        # Ensure that the number of dimensions is the same
+    #    if tensor.dim() != len(desired_shape):
+    #        raise ValueError(
+    #            f"Tensor has {tensor.dim()} dimensions but desired shape requires {len(desired_shape)} dimensions.")
+
+        # Process each dimension independently
+    #    for i in range(len(desired_shape)):
+    #        if tensor.shape[i] < desired_shape[i]:
+    #            # Padding for the current dimension
+    #            padding_size = desired_shape[i] - tensor.shape[i]
+    #            pad_shape = list(tensor.shape)
+    #            pad_shape[i] = padding_size
+    #            padding = torch.zeros(*pad_shape, dtype=tensor.dtype)
+    #            tensor = torch.cat([tensor, padding], dim=i)
+    #        elif tensor.shape[i] > desired_shape[i]:
+    #            # Trimming for the current dimension
+    #            slices = [slice(None)] * len(tensor.shape)
+    #            slices[i] = slice(0, desired_shape[i])
+    #            tensor = tensor[tuple(slices)]
+
+    #    return tensor
+
+    # New, reformulated reshape_tensor() method
+    def reshape_tensor(self, tensor, desired_shape):
+        if len(desired_shape) == 2 and tensor.dim() > 2:
+            # Flatten the tensor except for the batch dimension
+            tensor = tensor.view(tensor.size(0), -1)
+
+        if tensor.shape != desired_shape:
+            if tensor.shape[1] < desired_shape[1]:
+                padding_size = desired_shape[1] - tensor.shape[1]
+                padding = torch.zeros(tensor.shape[0], padding_size, dtype=tensor.dtype)
+                tensor = torch.cat([tensor, padding], dim=1)
+            elif tensor.shape[1] > desired_shape[1]:
+                tensor = tensor[:, :desired_shape[1]]
+        return tensor
+
+    # Old, initial act() method:
+    #def act(self, state, other_agents=None):
+    #    if np.random.rand() <= self.epsilon:
+    #        return random.randrange(self.action_size)
+    #    state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+    #    state = self.reshape_tensor(state, (1, self.input_dim))
+    #    q_values = self.model(state)
+
+    #    if self.cooperative and other_agents:
+    #        combined_q_values = q_values.clone()
+    #        for agent in other_agents:
+    #            combined_q_values += agent.model(state)
+    #        combined_q_values /= (1 + len(other_agents))
+    #        return torch.argmax(combined_q_values).item()
+    #    else:
+    #        return torch.argmax(q_values).item()
+
+    #Adjusted act() method:
+    def act(self, state, other_agents=None):
+        # Ensure action is within the valid range
+        action = random.randrange(self.action_size)
+        #Epsilon-greedy
+        if np.random.rand() > self.epsilon:
+            state = torch.tensor(state, dtype=torch.float32).clone().detach().unsqueeze(0)
+            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = self.reshape_tensor(state, (1, self.input_dim))
+            q_values = self.model(state)
+            # if-check for cooperative behaviour, needs fine-tuning
+            if self.cooperative and other_agents:
+                combined_q_values = q_values.clone()
+                for agent in other_agents:
+                    combined_q_values += agent.model(state)
+                combined_q_values /= (1 + len(other_agents))
+                action = torch.argmax(combined_q_values).item()
+            else:
+                action = torch.argmax(q_values).item()
+        # Add debug prints to ensure action is valid
+        #print(f"Selected action: {action}")
+        return action
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    def update(self, batch_size=32):
+        if len(self.memory) < batch_size:
+            return
+
+        minibatch = random.sample(self.memory, batch_size)
+        for state, action, reward, next_state, done in minibatch:
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            state = self.reshape_tensor(state, (1, self.input_dim))
+            #print(f"Shape of input tensor 'state': {state.shape}")
+
+            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            next_state = self.reshape_tensor(next_state, (1, self.input_dim))
+            #print(f"Shape of input tensor 'next_state': {next_state.shape}")
+
+            assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
+            assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
+
+            #reward = reward.clone().detach().float().unsqueeze(0)
+            reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
+            #done = done.clone().detach().float().unsqueeze(0)
+            done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
+            target = reward
+
+            if not done:
+                with torch.no_grad():
+                    next_state_value = self.model(next_state)
+                    #print(f"Next state value shape: {next_state_value.shape}")
+                target += self.gamma * torch.max(next_state_value)
+
+            output = self.model(state)[0, action]
+
+            # Ensure target is a tensor with the same shape as output
+            target = target.clone().detach().float().unsqueeze(0)
+            # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
+            #print(f"Shape of target tensor: {target.shape}")
+
+            # Debug prints to ensure no NaNs or invalid values
+            if torch.isnan(output).any() or torch.isnan(target).any():
+                #print("NaN detected in output or target!")
+                continue
+
+            # Loss calculation
+            loss = self.criterion(output.reshape(1,-1), target)
+
+            # Optimization step
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # Epsilon decay
+            if self.epsilon > self.min_epsilon:
+                self.epsilon *= self.epsilon_decay
