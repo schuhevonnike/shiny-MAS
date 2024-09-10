@@ -53,7 +53,7 @@ def evaluate(agents, num_episodes=10, cooperative=False):
                 })
 
             # Check if all agents are done
-            episode_done = all([termination or truncation for agent in env.possible_agents])
+                episode_done = all([termination or truncation for agent in env.possible_agents])
 
         # Cooperative or individual rewards logging
         if cooperative:
