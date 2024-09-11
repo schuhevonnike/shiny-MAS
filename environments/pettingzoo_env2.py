@@ -1,7 +1,7 @@
 from pettingzoo.mpe import simple_tag_v3
 from pettingzoo.classic import rps_v2
 from pettingzoo.utils import wrappers
-
+#from pettingzoo.mpe import simple_adversary_v3
 
 def make_env():
     # Load the simple_tag_v3 environment
@@ -10,7 +10,7 @@ def make_env():
     #env = wrappers.BaseWrapper(env)
 
     # Beobachtung: Die Reihenfolge der Entscheidungsfindung gelingt auch ohne OrderEnforcingWrapper (adv_0 -> adv_1 -> adv_2 -> agent_0 -> adv_0)
-    #env = wrappers.OrderEnforcingWrapper(env)
+    env = wrappers.OrderEnforcingWrapper(env)
     return env
 
 if __name__ == "__main__":

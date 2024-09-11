@@ -49,7 +49,15 @@ def train(agents, num_episodes=10, cooperative=False):
 
                 # Select an action only if the agent is not done
                 if not (termination or truncation):
+                    # Action is currently only selected based on mode == cooperative
                     action = select_action(agents[agent], observation, cooperative=cooperative, other_agents=agents.values())
+
+                    # Wieso nicht analog zur evaluate() Methode?
+                    #with torch.no_grad():
+                    #    if cooperative:
+                    #        action = agents[agent].act(obs_tensor)
+                    #    else:
+                    #        action = torch.argmax(agents[agent].model(obs_tensor)).item()
                 else:
                     action = None  # Set action to None if the agent is done
 
@@ -63,7 +71,7 @@ def train(agents, num_episodes=10, cooperative=False):
                 # Log the step data
                 data_records.append({
                     'Episode': episode + 1,
-                    'Step': step,
+                    #'Step': step,
                     'Agent': agent,
                     'Mode': 'cooperative' if cooperative else 'individual',
                     'Action': action,
