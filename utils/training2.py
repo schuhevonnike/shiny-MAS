@@ -45,25 +45,31 @@ def train(agents, num_episodes=10, cooperative=False):
                     env.step(None)
                     continue
 
+                # Aufrufen des letzten Steps über .last()
                 observation, reward, termination, truncation, _ = env.last()
+
+                # Observation aus letztem Schritt zwischenspeichern und mit Next_Observation zusammenführen
 
                 # Select an action only if the agent is not done
                 if not (termination or truncation):
                     # Action is currently only selected based on mode == cooperative
-                    action = select_action(agents[agent], observation, cooperative=cooperative, other_agents=agents.values())
+                    #action = select_action(agents[agent], observation, cooperative=cooperative, other_agents=agents.values())
 
                     # Wieso nicht analog zur evaluate() Methode?
-                    #with torch.no_grad():
-                    #    if cooperative:
-                    #        action = agents[agent].act(obs_tensor)
-                    #    else:
-                    #        action = torch.argmax(agents[agent].model(obs_tensor)).item()
+                    obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                    with torch.no_grad():
+                        if cooperative:
+                            action = agents[agent].act(obs_tensor)
+                        else:
+                            action = torch.argmax(agents[agent].model(obs_tensor)).item()
                 else:
                     action = None  # Set action to None if the agent is done
 
-                # Step in the environment
+                # Step in the environment, skips to the next agent
                 env.step(action)
-                next_observation, reward, termination, truncation, _ = env.last()
+                # We HAVE to step over all other agents before returning to the initial agent
+                # Problem unsolved
+                next_observation, reward, termination, truncation, _ = env.last() # .last() bezieht sich stets auf den aktuellen Agenten
 
                 # Update rewards
                 total_rewards[agent] += reward

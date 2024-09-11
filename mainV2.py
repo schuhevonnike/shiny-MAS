@@ -10,7 +10,6 @@ from utils.evaluation2 import evaluate
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
 def initialize_agents(env, algorithm, mode):
     if hasattr(env, 'unwrapped'):
         env = env.unwrapped
@@ -87,6 +86,7 @@ def run_experiment(env_fn, algorithm, num_episodes):
 
 
 if __name__ == "__main__":
+    #print("Hello")
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison")
     parser.add_argument('--algorithm', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
     parser.add_argument('--num_episodes', type=int, default=16, help='Number of episodes for training each group of agents')

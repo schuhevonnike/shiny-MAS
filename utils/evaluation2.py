@@ -4,7 +4,7 @@ import os
 import time
 from environments.pettingzoo_env2 import make_env
 
-
+# Epsilon soll während der Auswertung auf 0 gesetzt werden!!!
 def evaluate(agents, num_episodes=10, cooperative=False):
     env = make_env()
     rewards_history = {agent: [] for agent in agents.keys()}  # Individual rewards
@@ -39,6 +39,7 @@ def evaluate(agents, num_episodes=10, cooperative=False):
 
                 # Store step data
                 next_observation, reward, termination, truncation, _ = env.last()
+                # Bezug auf den falschen Agenten
                 data_records.append({
                     'Episode': episode + 1,
                     'Agent': agent,
