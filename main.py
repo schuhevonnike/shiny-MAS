@@ -35,7 +35,7 @@ def run_experiment(env_fn, num_episodes):
     env.close()
     # Evaluate agents
     print("Evaluating Individual Agents:")
-    rewards_history, avg_rewards = evaluate(individual_agents, num_episodes=num_episodes)
+    avg_rewards = evaluate(individual_agents, num_episodes=num_episodes)
 
 
 if __name__ == "__main__":
