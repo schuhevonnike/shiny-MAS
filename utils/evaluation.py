@@ -33,9 +33,9 @@ def evaluate(agents, num_episodes):
                 agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
                 if len(agents[agent].memory) >= 64:
                     agents[agent].update(64)
-            env.close()
-            for agent in total_rewards:
-                rewards_history[agent].append(total_rewards[agent])
+        env.close()
+        for agent in total_rewards:
+            rewards_history[agent].append(total_rewards[agent])
         print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
         avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
         return avg_rewards
