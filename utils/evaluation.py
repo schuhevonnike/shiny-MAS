@@ -30,7 +30,7 @@ def evaluate(agents, num_episodes):
                 next_observation, reward, termination, truncation, _ = env.last()
                 if termination or truncation:
                     done[agent] = True
-                agents[agent].remember(observation, action, reward, termination or truncation, done)
+                agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
                 if len(agents[agent].memory) >= 64:
                     agents[agent].update(64)
             env.close()
