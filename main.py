@@ -32,7 +32,6 @@ def run_experiment(env_fn, num_episodes):
     print("\nAverage Training Rewards for Individual Agents:")
     for agent, reward in avg_rewards.items():
         print(f"{agent}: {reward:.2f}")
-    env.close()
     # Evaluate agents:
     print("Evaluating Individual Agents:")
     avg_rewards = evaluate(individual_agents, num_episodes=num_episodes)
@@ -40,6 +39,7 @@ def run_experiment(env_fn, num_episodes):
     print("\nAverage Evaluation Rewards for Individual Agents:")
     for agent, reward in avg_rewards.items():
         print(f"{agent}: {reward:.2f}")
+    env.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py main.py (--algo) (--num_episodes)")
