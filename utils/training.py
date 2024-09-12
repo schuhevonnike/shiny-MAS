@@ -1,6 +1,6 @@
-import os
+#import os
+#import pandas as pd
 import torch
-import pandas as pd
 from environments.pettingzoo_env import make_env
 
 def select_action(agent, observation):
