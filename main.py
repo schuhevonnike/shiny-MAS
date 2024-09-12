@@ -21,22 +21,23 @@ def initialize_agents(env):
         agents[agent_id] = DQNAgent(state_size, action_size)
     return agents
 
-def run_experiment(env_fn, algo, num_episodes):
+def run_experiment(env_fn, num_episodes):
     env = env_fn()
-    # Initialize agents
+    # Initializing agents:
     print("Initializing Individual Agents...")
     individual_agents = initialize_agents(env)
-    # Train agents
+    # Training agents:
     print("Training Individual Agents:")
-    individual_rewards = train(individual_agents, num_episodes=num_episodes)
-    # Evaluate agents
-    print("Evaluating Individual Agents:")
-    rewards_history, avg_individual_rewards = evaluate(individual_agents, num_episodes=num_episodes)
-    # Print individual agent results
+    avg_rewards = train(individual_agents, num_episodes=num_episodes)
+    # Print average individual agent results.
     print("\nAverage Rewards for Individual Agents:")
-    for agent, reward in avg_individual_rewards.items():
+    for agent, reward in avg_rewards.items():
         print(f"{agent}: {reward:.2f}")
     env.close()
+    # Evaluate agents
+    print("Evaluating Individual Agents:")
+    rewards_history, avg_rewards = evaluate(individual_agents, num_episodes=num_episodes)
+
 
 if __name__ == "__main__":
     #print("Hello")
