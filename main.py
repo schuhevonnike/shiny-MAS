@@ -13,10 +13,10 @@ def initialize_agents(env):
         env = env.unwrapped
     agents = {}
     for agent_id in env.possible_agents:
-        # Reshape observation and action space
+        # Reshape observation and action space.
         state_size = env.observation_space(agent_id).shape[0]
         action_size = env.action_space(agent_id).n
-        # Create agents that inherit
+        # Create agents that inherit the attributes from the DQNAgent class.
         agents[agent_id] = DQNAgent(state_size, action_size)
     return agents
 
@@ -28,18 +28,20 @@ def run_experiment(env_fn, num_episodes):
     # Training agents:
     print("Training Individual Agents:")
     avg_rewards = train(individual_agents, num_episodes=num_episodes)
-    # Print average individual agent results.
-    print("\nAverage Rewards for Individual Agents:")
+    # Print average individual agent training results:
+    print("\nAverage Training Rewards for Individual Agents:")
     for agent, reward in avg_rewards.items():
         print(f"{agent}: {reward:.2f}")
     env.close()
-    # Evaluate agents
+    # Evaluate agents:
     print("Evaluating Individual Agents:")
     avg_rewards = evaluate(individual_agents, num_episodes=num_episodes)
-
+    # Print average individual agent evaluation results:
+    print("\nAverage Evaluation Rewards for Individual Agents:")
+    for agent, reward in avg_rewards.items():
+        print(f"{agent}: {reward:.2f}")
 
 if __name__ == "__main__":
-    #print("Hello")
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py main.py (--algo) (--num_episodes)")
     #parser.add_argument('--algo', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
     parser.add_argument('--num_episodes', type=int, default=4, help='Number of episodes for training each group of agents')
