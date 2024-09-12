@@ -23,17 +23,17 @@ def initialize_agents(env):
 def run_experiment(env_fn, num_episodes):
     env = env_fn()
     # Initializing agents:
-    print("Initializing Individual Agents...")
+    print("\nInitializing Individual Agents...")
     individual_agents = initialize_agents(env)
     # Training agents:
-    print("Training Individual Agents:")
+    print("\nTraining Individual Agents:")
     avg_training_rewards = train(individual_agents, num_episodes=num_episodes)
     # Print average individual agent training results:
     print("\nAverage Training Rewards for Individual Agents:")
     for agent, reward in avg_training_rewards.items():
         print(f"{agent}: {reward:.2f}")
     # Evaluate agents:
-    print("Evaluating Individual Agents:")
+    print("\nEvaluating Individual Agents:")
     avg_evaluation_rewards = evaluate(individual_agents, num_episodes=num_episodes)
     # Print average individual agent evaluation results:
     print("\nAverage Evaluation Rewards for Individual Agents:")
