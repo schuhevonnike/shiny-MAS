@@ -47,7 +47,7 @@ def train(agents, num_episodes=10, cooperative=False):
 
                 # Aufrufen des letzten Steps über .last()
                 observation, reward, termination, truncation, _ = env.last()
-
+                combined_observation = env.
                 # Observation aus letztem Schritt zwischenspeichern und mit Next_Observation zusammenführen
 
                 # Select an action only if the agent is not done

@@ -109,14 +109,14 @@ class DQNAgent:
             state = self.reshape_tensor(state, (1, self.input_dim))
             q_values = self.model(state)
             # if-check for cooperative behaviour, needs fine-tuning
-            if self.cooperative and other_agents:
-                combined_q_values = q_values.clone()
-                for agent in other_agents:
-                    combined_q_values += agent.model(state)
-                combined_q_values /= (1 + len(other_agents))
-                action = torch.argmax(combined_q_values).item()
-            else:
-                action = torch.argmax(q_values).item()
+            #if self.cooperative and other_agents:
+            #    combined_q_values = q_values.clone()
+            #    for agent in other_agents:
+            #        combined_q_values += agent.model(state)
+            #    combined_q_values /= (1 + len(other_agents))
+            #    action = torch.argmax(combined_q_values).item()
+            #else:
+            action = torch.argmax(q_values).item()
         # Add debug prints to ensure action is valid
         #print(f"Selected action: {action}")
         return action
