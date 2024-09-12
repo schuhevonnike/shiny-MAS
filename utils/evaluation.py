@@ -27,6 +27,7 @@ def evaluate(agents, num_episodes):
                     action = None
                 total_rewards[agent] += reward
                 env.step(action)
+                next_observation, reward, termination, truncation, _ = env.last()
                 if termination or truncation:
                     done[agent] = True
                 agents[agent].remember(observation, action, reward, termination or truncation, done)

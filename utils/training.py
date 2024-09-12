@@ -71,7 +71,7 @@ def train(agents, num_episodes):
         # Logging rewards at the end of each episode.
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
-        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {rewards_history}")
+        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
         '''
         # Save the recorded data to a CSV
         df_eval = pd.DataFrame(data_records)
