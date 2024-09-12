@@ -12,7 +12,7 @@ def initialize_agents(env):
     if hasattr(env, 'unwrapped'):
         env = env.unwrapped
     agents = {}
-    for agent_id in env.agent_iter:
+    for agent_id in env.possible_agents:
         # Reshape observation and action space
         state_size = env.observation_space(agent_id).shape[0]
         action_size = env.action_space(agent_id).n
@@ -42,6 +42,6 @@ if __name__ == "__main__":
     #print("Hello")
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py main.py (--algo) (--num_episodes)")
     #parser.add_argument('--algo', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
-    parser.add_argument('--num_episodes', type=int, default=16, help='Number of episodes for training each group of agents')
+    parser.add_argument('--num_episodes', type=int, default=4, help='Number of episodes for training each group of agents')
     args = parser.parse_args()
     run_experiment(env_fn=make_env, num_episodes=args.num_episodes)

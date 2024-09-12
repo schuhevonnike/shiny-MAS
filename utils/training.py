@@ -43,6 +43,9 @@ def train(agents, num_episodes):
                 # Step in the environment with the selected action.
                 # This instance skips to the next agent.
                 env.step(action)
+                # This next line is still unresolved:
+                next_observation, reward, termination, truncation, _ = env.last()  # .last() refers to the current agent, in the case of adv_0 taking a step the next agent would then be adv_1
+                # However, we would need the next_observation of the adv_0 instead.
                 '''
                 # Log the step data
                 data_records.append({
@@ -59,7 +62,7 @@ def train(agents, num_episodes):
                 if termination or truncation:
                     done[agent] = True
                 # Store experience for each agent during training.
-                agents[agent].remember(observation, action, reward, termination or truncation)
+                agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
                 # Update agent if enough experience is collected.
                 if len(agents[agent].memory) >= 64:
                     agents[agent].update(64)
@@ -68,7 +71,7 @@ def train(agents, num_episodes):
         # Logging rewards at the end of each episode.
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
-        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {rewards_history}")
         '''
         # Save the recorded data to a CSV
         df_eval = pd.DataFrame(data_records)
