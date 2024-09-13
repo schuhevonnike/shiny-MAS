@@ -30,7 +30,7 @@ class DQNAgent:
         self.model = DQN(state_size, action_size)
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
-        self.cooperative = cooperative
+        #self.cooperative = cooperative
 
     # Manually added method to reshape tensors to avoid DimensionMismatch (old, misfunctional version)
     #def reshape_tensor(self, tensor, desired_shape):
@@ -153,20 +153,26 @@ class DQNAgent:
                     #print(f"Next state value shape: {next_state_value.shape}")
                 target += self.gamma * torch.max(next_state_value)
 
-            output = self.model(state)[0, action]
+            output = self.model(state)[0, action].unsqueeze(0)
+            # Ensure the target and output have the same shape
+            #target = target.squeeze() # Flatten target to a 1D tensor
 
             # Ensure target is a tensor with the same shape as output
-            target = target.clone().detach().float().unsqueeze(0)
+            # target = target.clone().detach().float().unsqueeze(0)
+            # Ensure target is a tensor with the same shape as output
+            #target = target.expand_as(output)
+
             # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
             #print(f"Shape of target tensor: {target.shape}")
 
             # Debug prints to ensure no NaNs or invalid values
             if torch.isnan(output).any() or torch.isnan(target).any():
-                #print("NaN detected in output or target!")
+                print("NaN detected in output or target!")
                 continue
 
             # Loss calculation
-            loss = self.criterion(output.reshape(1,-1), target)
+            loss = self.criterion(output, target)
+            #loss = self.criterion(output.reshape(1,-1), target)
 
             # Optimization step
             self.optimizer.zero_grad()
