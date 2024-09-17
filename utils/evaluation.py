@@ -28,9 +28,10 @@ def evaluate(agents, num_episodes):
                 total_rewards[agent] += reward
                 env.step(action)
                 next_observation, reward, termination, truncation, _ = env.last()
+                next_obs_tensor = torch.tensor(next_observation, dtype=torch.float32).unsqueeze(0)
                 if termination or truncation:
                     done[agent] = True
-                agents[agent].remember(observation, action, reward, next_observation, termination or truncation)
+                agents[agent].remember(observation, action, reward, next_obs_tensor, termination or truncation)
                 if len(agents[agent].memory) >= 64:
                     agents[agent].update(64)
         env.close()

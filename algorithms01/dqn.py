@@ -134,7 +134,9 @@ class DQNAgent:
             state = self.reshape_tensor(state, (1, self.input_dim))
             #print(f"Shape of input tensor 'state': {state.shape}")
 
-            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            #next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            next_state = next_state.clone().detach()
+
             next_state = self.reshape_tensor(next_state, (1, self.input_dim))
             #print(f"Shape of input tensor 'next_state': {next_state.shape}")
 
@@ -145,25 +147,27 @@ class DQNAgent:
             reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
             #done = done.clone().detach().float().unsqueeze(0)
             done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
-            target = reward
+            target = reward.clone()
 
-            if not done:
+            if not done.item():
                 with torch.no_grad():
-                    next_state_value = self.model(next_state)
+                    next_state_value = self.model(next_state).max(1)[0]
                     #print(f"Next state value shape: {next_state_value.shape}")
-                target += self.gamma * torch.max(next_state_value)
+                target = reward + (1 - done) * self.gamma * next_state_value
+                #target += self.gamma * torch.max(next_state_value)
 
             output = self.model(state)[0, action].unsqueeze(0)
-            # Ensure the target and output have the same shape
-            #target = target.squeeze() # Flatten target to a 1D tensor
-
-            # Ensure target is a tensor with the same shape as output
-            # target = target.clone().detach().float().unsqueeze(0)
-            # Ensure target is a tensor with the same shape as output
-            #target = target.expand_as(output)
+            # Fix target shape if it is a scalar or has incompatible shape
+            #if target.dim() == 1:  # If target is a vector
+            #    target = target.expand(output.shape)
+            #elif target.dim() == 0:  # If target is a scalar
+            #    target = torch.full_like(output, target.item())
 
             # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
             #print(f"Shape of target tensor: {target.shape}")
+
+            # Ensure target and output are of the same shape
+            #assert output.shape == target.shape, f"Output shape {output.shape} does not match target shape {target.shape}"
 
             # Debug prints to ensure no NaNs or invalid values
             if torch.isnan(output).any() or torch.isnan(target).any():
@@ -172,7 +176,6 @@ class DQNAgent:
 
             # Loss calculation
             loss = self.criterion(output, target)
-            #loss = self.criterion(output.reshape(1,-1), target)
 
             # Optimization step
             self.optimizer.zero_grad()
