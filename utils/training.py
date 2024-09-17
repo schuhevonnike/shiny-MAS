@@ -28,6 +28,7 @@ def train(agents, num_episodes):
                 # Call the last() method to gather the relevant data from the last step taken in the environment.
                 # In the first iteration, the last step equals the initialization of the environment itself.
                 # Deprecate any remaining info (', _') .
+                # Observation = input, reward = target
                 observation, reward, termination, truncation, _ = env.last()
                 # Save observation and combine with next_observation.
                 # Select an action only if the agent is not done.
