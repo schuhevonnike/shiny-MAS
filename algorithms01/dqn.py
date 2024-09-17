@@ -152,11 +152,13 @@ class DQNAgent:
             if not done.item():
                 with torch.no_grad():
                     next_state_value = self.model(next_state).max(1)[0]
+                    #next_state_value = self.model(next_state)
                     #print(f"Next state value shape: {next_state_value.shape}")
                 target = reward + (1 - done) * self.gamma * next_state_value
                 #target += self.gamma * torch.max(next_state_value)
 
             output = self.model(state)[0, action].unsqueeze(0)
+
             # Fix target shape if it is a scalar or has incompatible shape
             #if target.dim() == 1:  # If target is a vector
             #    target = target.expand(output.shape)
