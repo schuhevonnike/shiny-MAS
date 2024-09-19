@@ -134,8 +134,8 @@ class DQNAgent:
             state = self.reshape_tensor(state, (1, self.input_dim))
             # print(f"Shape of input tensor 'state': {state.shape}")
 
-            # next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-            next_state = next_state.clone().detach()
+            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+            #next_state = next_state.clone().detach()
 
             next_state = self.reshape_tensor(next_state, (1, self.input_dim))
             # print(f"Shape of input tensor 'next_state': {next_state.shape}")
