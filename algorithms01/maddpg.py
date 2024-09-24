@@ -33,8 +33,8 @@ class Critic(nn.Module):
 
 
 class MADDPGAgent:
-    def __init__(self, state_size, action_size, cooperative=False, actor_lr=1e-3, critic_lr=1e-3, gamma=0.99, tau=0.01):
-        self.cooperative = cooperative
+    def __init__(self, state_size, action_size, actor_lr=1e-3, critic_lr=1e-3, gamma=0.99, tau=0.01):
+        #self.cooperative = cooperative
         self.actor = Actor(state_size, action_size)
         self.critic = Critic(state_size * 2, action_size * 2)  # Assuming centralized critic with both agents' states/actions
         self.target_actor = Actor(state_size, action_size)

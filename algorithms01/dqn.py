@@ -17,6 +17,7 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
+# learning_rate == Beta (ß)
 class DQNAgent:
     def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
                  epsilon_decay=0.995, min_epsilon=0.01):
@@ -135,7 +136,7 @@ class DQNAgent:
             # print(f"Shape of input tensor 'state': {state.shape}")
 
             next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-            #next_state = next_state.clone().detach()
+            #next_state = next_state.clone().detach().requires_grad_(True)
 
             next_state = self.reshape_tensor(next_state, (1, self.input_dim))
             # print(f"Shape of input tensor 'next_state': {next_state.shape}")
@@ -155,7 +156,7 @@ class DQNAgent:
                     # next_state_value = self.model(next_state)
                     # print(f"Next state value shape: {next_state_value.shape}")
                 target = reward + (1 - done) * self.gamma * next_state_value
-                # target += self.gamma * torch.max(next_state_value)
+                #target += self.gamma * torch.max(next_state_value)
             output = self.model(state)[0, action]
             target = target.unsqueeze(1)
             output = output.unsqueeze(0)

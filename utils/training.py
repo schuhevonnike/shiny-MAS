@@ -15,6 +15,7 @@ def train(agents, num_episodes):
 
     for episode in range(num_episodes):
         env.reset()
+        # env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
         done = {agent: False for agent in env.possible_agents}
@@ -46,7 +47,7 @@ def train(agents, num_episodes):
                 env.step(action)
                 # This next line is still unresolved:
                 next_observation, reward, termination, truncation, _ = env.last()  # .last() refers to the current agent, in the case of adv_0 taking a step the next agent would then be adv_1
-                # However, we would need the next_observation of the adv_0 instead.
+                # However, we would need the next_observation of adv_0 instead.
                 #next_obs_tensor = torch.tensor(next_observation, dtype=torch.float32).unsqueeze(0)
                 '''
                 # Log the step data

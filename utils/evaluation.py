@@ -11,6 +11,7 @@ def evaluate(agents, num_episodes):
     # Currently not considered with this logic is the fact that the greedy-factor epsilon (in the case of DQN) needs to be set to 0.
     for episode in range(num_episodes):
         env.reset()
+        # env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         done = {agent: False for agent in env.possible_agents}
         while not all(done.values()):
