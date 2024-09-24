@@ -28,22 +28,11 @@ def run_experiment(env_fn, num_episodes):
     # Training agents:
     print("\nTraining Individual Agents:")
     avg_training_rewards = train(individual_agents, num_episodes=num_episodes)
-    # Print average individual agent training results:
-    print("\nAverage Training Rewards for Individual Agents:")
-    for agent, reward in avg_training_rewards.items():
-        print(f"{agent}: {reward:.2f}")
-    # Evaluate agents:
-    print("\nEvaluating Individual Agents:")
-    avg_evaluation_rewards = evaluate(individual_agents, num_episodes=num_episodes)
-    # Print average individual agent evaluation results:
-    print("\nAverage Evaluation Rewards for Individual Agents:")
-    for agent, reward in avg_evaluation_rewards.items():
-        print(f"{agent}: {reward:.2f}")
     env.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py main.py (--algo) (--num_episodes)")
     #parser.add_argument('--algo', type=str, default='DQN', help='Algorithm to use: DQN, PPO, SAC, MADDPG')
-    parser.add_argument('--num_episodes', type=int, default=12, help='Number of episodes for training each group of agents')
+    parser.add_argument('--num_episodes', type=int, default=10_000, help='Number of episodes for training each group of agents')
     args = parser.parse_args()
     run_experiment(env_fn=make_env, num_episodes=args.num_episodes)
