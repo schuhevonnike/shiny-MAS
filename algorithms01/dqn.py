@@ -19,8 +19,8 @@ class DQN(nn.Module):
 
 # learning_rate == Beta (ß)
 class DQNAgent:
-    def __init__(self, state_size, action_size, cooperative=False, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
-                 epsilon_decay=0.995, min_epsilon=0.01):
+    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
+                 epsilon_decay=0.995, min_epsilon=0.01, target_update_freq=1000):
         self.input_dim = state_size
         self.action_size = action_size
         self.gamma = gamma
@@ -29,8 +29,12 @@ class DQNAgent:
         self.min_epsilon = min_epsilon
         self.memory = deque(maxlen=2000)
         self.model = DQN(state_size, action_size)
+        self.target_model = DQN(state_size, action_size)        # Added 26.09
+        self.update_steps = 0                                   # Added 26.09
+        self.target_update_freq = target_update_freq            # Added 26.09
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
+
         #self.cooperative = cooperative
 
     # Manually added method to reshape tensors to avoid DimensionMismatch (old, misfunctional version)
@@ -130,36 +134,54 @@ class DQNAgent:
             return
 
         minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-            state = self.reshape_tensor(state, (1, self.input_dim))
+
+        states = torch.tensor(np.array([t[0] for t in minibatch]), dtype=torch.float32)
+        actions = torch.tensor(np.array([t[1] for t in minibatch]), dtype=torch.long)
+        rewards = torch.tensor(np.array([t[2] for t in minibatch]), dtype=torch.float32)
+        next_states = torch.tensor(np.array([t[3] for t in minibatch]), dtype=torch.float32)
+        dones = torch.tensor(np.array([t[4] for t in minibatch]), dtype=torch.bool)
+
+        # Compute Q(s_t, a)
+        state_action_values = self.model(states).gather(1, actions.unsqueeze(1))
+
+        # Old for loop
+        #for state, action, reward, next_state, done in minibatch:
+        #    state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        #    state = self.reshape_tensor(state, (1, self.input_dim))
             # print(f"Shape of input tensor 'state': {state.shape}")
 
-            next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
+        #    next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
             #next_state = next_state.clone().detach().requires_grad_(True)
 
-            next_state = self.reshape_tensor(next_state, (1, self.input_dim))
+        #    next_state = self.reshape_tensor(next_state, (1, self.input_dim))
             # print(f"Shape of input tensor 'next_state': {next_state.shape}")
 
-            assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
-            assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
+        #    assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
+        #    assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
 
             # reward = reward.clone().detach().float().unsqueeze(0)
-            reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
+        #    reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
             # done = done.clone().detach().float().unsqueeze(0)
-            done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
-            target = reward.clone()
+        #    done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
+        #    target = reward.clone()
 
-            if not done.item():
-                with torch.no_grad():
-                    next_state_value = self.model(next_state).max(1)[0]
+        #    if not done.item():
+        #        with torch.no_grad():
+        #            next_state_value = self.model(next_state).max(1)[0]
                     # next_state_value = self.model(next_state)
                     # print(f"Next state value shape: {next_state_value.shape}")
-                target = reward + (1 - done) * self.gamma * next_state_value
+        #        target = reward + (1 - done) * self.gamma * next_state_value
                 #target += self.gamma * torch.max(next_state_value)
-            output = self.model(state)[0, action]
-            target = target.unsqueeze(1)
-            output = output.unsqueeze(0)
+        #    output = self.model(state)[0, action]
+        #    target = target.unsqueeze(1)
+        #    output = output.unsqueeze(0)
+
+        with torch.no_grad():
+            # Use target network for next state value estimation
+            next_state_values = self.target_model(next_states).max(1)[0]
+            # Set next_state_values to zero where done is True
+            next_state_values[dones] = 0.0
+            expected_state_action_values = rewards + (self.gamma * next_state_values)
 
             # Fix target shape if it is a scalar or has incompatible shape
             # if target.dim() == 1:  # If target is a vector
@@ -174,20 +196,29 @@ class DQNAgent:
             # assert output.shape == target.shape, f"Output shape {output.shape} does not match target shape {target.shape}"
 
             # Debug prints to ensure no NaNs or invalid values
-            if torch.isnan(output).any() or torch.isnan(target).any():
-                print("NaN detected in output or target!")
-                continue
+            #if torch.isnan(output).any() or torch.isnan(target).any():
+            #    print("NaN detected in output or target!")
+            #    continue
 
             # Loss calculation
-            loss = self.criterion(output, target)
+            loss = self.criterion(state_action_values.squeeze(), expected_state_action_values)
+            # print(loss, state_action_values.mean(), expected_state_action_values.mean())
+            #loss = self.criterion(output, target)
 
             # Optimization step
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-            # Epsilon decay
-            if self.epsilon > self.min_epsilon:
-                self.epsilon *= self.epsilon_decay
+            # Epsilon update
+            #if self.epsilon > self.min_epsilon:
+            #    self.epsilon *= self.epsilon_decay
 
+            # Update epsilon
+            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+
+            # Update the target network
+            self.update_steps += 1
+            if self.update_steps % self.target_update_freq == 0:
+                self.target_model.load_state_dict(self.model.state_dict())
 
