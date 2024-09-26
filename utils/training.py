@@ -27,6 +27,7 @@ def train(agents, num_episodes):
         last_action = {agent: None for agent in env.possible_agents}
 
         for agent in env.agent_iter():
+            env.reset()
             observation, reward, termination, truncation, _ = env.last()
             current_done = termination or truncation
             done[agent] = current_done
