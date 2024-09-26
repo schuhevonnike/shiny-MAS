@@ -1,3 +1,5 @@
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -79,14 +81,20 @@ class SACAgent:
             return
 
         minibatch = random.sample(self.memory, batch_size)
-        states, actions, rewards, next_states, dones = zip(*minibatch)
+        #states, actions, rewards, next_states, dones = zip(*minibatch)
 
-        # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32).to(self.device)
-        actions = torch.tensor(actions, dtype=torch.float32).to(self.device)
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
-        dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
+        # Convert experience tuples to tensors
+        states = torch.tensor(np.array([t[0] for t in minibatch]), dtype=torch.float32)
+        actions = torch.tensor(np.array([t[1] for t in minibatch]), dtype=torch.long)
+        rewards = torch.tensor(np.array([t[2] for t in minibatch]), dtype=torch.float32)
+        next_states = torch.tensor(np.array([t[3] for t in minibatch]), dtype=torch.float32)
+        dones = torch.tensor(np.array([t[4] for t in minibatch]), dtype=torch.bool)
+
+        #states = torch.tensor(states, dtype=torch.float32).to(self.device)
+        #actions = torch.tensor(actions, dtype=torch.float32).to(self.device)
+        #rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        #next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+        #dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
         # Compute target Q values
         with torch.no_grad():

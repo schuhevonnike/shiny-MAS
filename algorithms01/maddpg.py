@@ -1,3 +1,4 @@
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -65,16 +66,22 @@ class MADDPGAgent:
         action += noise * np.random.randn(*action.shape)  # Add exploration noise
         return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
 
-    def update(self, experiences, other_agent):
+    def update(self, batch_size=32):
         """Update actor and critic networks."""
-        states, actions, rewards, next_states, dones = experiences
+        #states, actions, rewards, next_states, dones = experiences
+        experiences = random.sample(self.memory, batch_size)
 
         # Convert experience tuples to tensors
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.float32)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        states = torch.tensor(np.array([t[0] for t in experiences]), dtype=torch.float32)
+        actions = torch.tensor(np.array([t[1] for t in experiences]), dtype=torch.long)
+        rewards = torch.tensor(np.array([t[2] for t in experiences]), dtype=torch.float32)
+        next_states = torch.tensor(np.array([t[3] for t in experiences]), dtype=torch.float32)
+        dones = torch.tensor(np.array([t[4] for t in experiences]), dtype=torch.bool)
+        #states = torch.tensor(states, dtype=torch.float32)
+        #actions = torch.tensor(actions, dtype=torch.float32)
+        #rewards = torch.tensor(rewards, dtype=torch.float32)
+        #next_states = torch.tensor(next_states, dtype=torch.float32)
+        #dones = torch.tensor(dones, dtype=torch.float32)
 
         # Actor update (policy gradient step)
         predicted_actions = self.actor(states)
@@ -87,11 +94,11 @@ class MADDPGAgent:
         # Critic update (Q-learning step)
         with torch.no_grad():
             target_actions = self.target_actor(next_states)
-            next_Q_values = self.target_critic(next_states, target_actions)
-            target_Q_values = rewards + self.gamma * next_Q_values * (1 - dones)
+            next_q_values = self.target_critic(next_states, target_actions)
+            target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
-        Q_values = self.critic(states, actions)
-        critic_loss = nn.MSELoss()(Q_values, target_Q_values)
+        q_values = self.critic(states, actions)
+        critic_loss = nn.MSELoss()(q_values, target_q_values)
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()

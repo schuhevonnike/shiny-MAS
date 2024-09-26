@@ -38,24 +38,32 @@ class PPOAgent:
         action = dist.sample()
         return action.item(), dist.log_prob(action)
 
-    def update(self, batch_size):
+    def update(self, batch_size=32):
         """Update the policy network using the PPO algorithm."""
-        states, actions, rewards, next_states, dones, old_log_probs = zip(*self.memory)
+        #states, actions, rewards, next_states, dones, old_log_probs = zip(*self.memory)
 
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.float32)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
-        old_log_probs = torch.stack(old_log_probs)
+        # Convert experience tuples to tensors
+        states = torch.tensor(np.array([t[0] for t in self.memory]), dtype=torch.float32)
+        actions = torch.tensor(np.array([t[1] for t in self.memory]), dtype=torch.long)
+        rewards = torch.tensor(np.array([t[2] for t in self.memory]), dtype=torch.float32)
+        next_states = torch.tensor(np.array([t[3] for t in self.memory]), dtype=torch.float32)
+        dones = torch.tensor(np.array([t[4] for t in self.memory]), dtype=torch.bool)
+        old_log_probs = torch.tensor(np.array([t[5] for t in self.memory]), dtype=torch.float32)
+
+        #states = torch.tensor(states, dtype=torch.float32)
+        #actions = torch.tensor(actions, dtype=torch.float32)
+        #rewards = torch.tensor(rewards, dtype=torch.float32)
+        #next_states = torch.tensor(next_states, dtype=torch.float32)
+        #dones = torch.tensor(dones, dtype=torch.float32)
+        #old_log_probs = torch.stack(old_log_probs)
 
         # Compute returns and advantages using the value network
         _, state_values = self.policy(states)
         returns = []
-        R = 0
+        r = 0
         for reward, done in zip(rewards[::-1], dones[::-1]):
-            R = reward + self.gamma * R * (1 - done)
-            returns.insert(0, R)
+            r = reward + self.gamma * r * (1 - done)
+            returns.insert(0, r)
 
         returns = torch.tensor(returns)
         advantages = returns - state_values.detach()
