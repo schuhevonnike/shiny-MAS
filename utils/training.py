@@ -27,7 +27,7 @@ def train(agents, num_episodes):
         last_action = {agent: None for agent in env.possible_agents}
 
         for agent in env.agent_iter():
-            env.reset()
+            #env.reset()
             observation, reward, termination, truncation, _ = env.last()
             current_done = termination or truncation
             done[agent] = current_done
@@ -45,22 +45,22 @@ def train(agents, num_episodes):
                     done=current_done
                 )
 
-                # Select action
-                if not current_done:
-                    if random.random() > agents[agent].epsilon:
-                        with torch.no_grad():
-                            obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                            q_values = agents[agent].model(obs_tensor)
-                            action = torch.argmax(q_values).item()
-                    else:
-                        action = env.action_space(agent).sample()
+            # Select action
+            if not current_done:
+                if random.random() > agents[agent].epsilon:
+                    with torch.no_grad():
+                        obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                        q_values = agents[agent].model(obs_tensor)
+                        action = torch.argmax(q_values).item()
                 else:
-                    action = None
+                    action = env.action_space(agent).sample()
+            else:
+                action = None
 
-                last_observation[agent] = observation
-                last_action[agent] = action
-                # Step the environment
-                env.step(action)
+            last_observation[agent] = observation
+            last_action[agent] = action
+            # Step the environment
+            env.step(action)
 
         for agent in agents:
             if len(agents[agent].memory) >= 256:
