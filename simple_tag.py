@@ -72,7 +72,7 @@ from pettingzoo.mpe._mpe_utils.scenario import BaseScenario
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv, make_env
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 
-IsCooperative = True
+IsCooperative = False
 
 class raw_env(SimpleEnv, EzPickle):
     def __init__(
@@ -262,10 +262,11 @@ class Scenario(BaseScenario):
             if other is agent:
                 continue
             comm.append(other.state.c)
-            # New if check for cooperative behaviour
+            # Check for agent behaviour. If agent is adversary and cooperative, append the position of the other agents
             if IsCooperative:
                 other_pos.append(other.state.p_pos - agent.state.p_pos)
             else:
+                # Else, if agent is agent_0 (not adv and not cooperative), append positional as well as velocity infos!
                 if not other.adversary:
                     other_pos.append(other.state.p_pos - agent.state.p_pos)
                     other_vel.append(other.state.p_vel)
