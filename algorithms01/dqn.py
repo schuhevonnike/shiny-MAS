@@ -17,10 +17,10 @@ class DQN(nn.Module):
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
-# learning_rate == Beta (ß)
+# learning_rate == Beta (ß) is a hyperparameter
 class DQNAgent:
     def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
-                 epsilon_decay=0.995, min_epsilon=0.01, target_update_freq=1000):
+                 epsilon_decay=0.9999, min_epsilon=0.01, target_update_freq=1000):
         self.input_dim = state_size
         self.action_size = action_size
         self.gamma = gamma
@@ -34,8 +34,6 @@ class DQNAgent:
         self.target_update_freq = target_update_freq            # Added 26.09
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
-
-        #self.cooperative = cooperative
 
     # Manually added method to reshape tensors to avoid DimensionMismatch (old, misfunctional version)
     #def reshape_tensor(self, tensor, desired_shape):
@@ -104,15 +102,15 @@ class DQNAgent:
     #        return torch.argmax(q_values).item()
 
     #Adjusted act() method:
-    def act(self, state, other_agents=None):
+    #def act(self, state, other_agents=None):
         # Ensure action is within the valid range
-        action = random.randrange(self.action_size)
+    #    action = random.randrange(self.action_size)
         #Epsilon-greedy
-        if np.random.rand() > self.epsilon:
-            state = torch.tensor(state, dtype=torch.float32).clone().detach().unsqueeze(0)
+    #    if np.random.rand() > self.epsilon:
+    #        state = torch.tensor(state, dtype=torch.float32).clone().detach().unsqueeze(0)
             #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-            state = self.reshape_tensor(state, (1, self.input_dim))
-            q_values = self.model(state)
+    #        state = self.reshape_tensor(state, (1, self.input_dim))
+    #        q_values = self.model(state)
             # if-check for cooperative behaviour, needs fine-tuning
             #if self.cooperative and other_agents:
             #    combined_q_values = q_values.clone()
@@ -121,10 +119,10 @@ class DQNAgent:
             #    combined_q_values /= (1 + len(other_agents))
             #    action = torch.argmax(combined_q_values).item()
             #else:
-            action = torch.argmax(q_values).item()
+    #        action = torch.argmax(q_values).item()
         # Add debug prints to ensure action is valid
         #print(f"Selected action: {action}")
-        return action
+    #   return action
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -200,25 +198,23 @@ class DQNAgent:
             #    print("NaN detected in output or target!")
             #    continue
 
-            # Loss calculation
-            loss = self.criterion(state_action_values.squeeze(), expected_state_action_values)
-            # print(loss, state_action_values.mean(), expected_state_action_values.mean())
-            #loss = self.criterion(output, target)
+        # Loss calculation
+        loss = self.criterion(state_action_values.squeeze(), expected_state_action_values)
+        # print(loss, state_action_values.mean(), expected_state_action_values.mean())
+        #loss = self.criterion(output, target)
 
-            # Optimization step
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        # Optimization step
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-
-
-            # Update epsilon
-            #if self.epsilon > self.min_epsilon:
-            #    self.epsilon *= self.epsilon_decay
-            self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
-
-            # Update the target network
-            self.update_steps += 1
-            if self.update_steps % self.target_update_freq == 0:
-                self.target_model.load_state_dict(self.model.state_dict())
+        # Update epsilon
+        #if self.epsilon > self.min_epsilon:
+        #    self.epsilon *= self.epsilon_decay
+        self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+        #print(self.epsilon)
+        # Update the target network
+        self.update_steps += 1
+        if self.update_steps % self.target_update_freq == 0:
+            self.target_model.load_state_dict(self.model.state_dict())
 

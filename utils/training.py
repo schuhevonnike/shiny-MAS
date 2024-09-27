@@ -5,11 +5,6 @@ import numpy as np
 import torch
 from environments.pettingzoo_env import make_env
 
-def select_action(agent, observation):
-    with torch.no_grad:
-        action = agent.act(observation)
-    return action
-
 def train(agents, num_episodes):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
@@ -47,6 +42,7 @@ def train(agents, num_episodes):
 
             # Select action
             if not current_done:
+                # Epsilon greedy implementation
                 if random.random() > agents[agent].epsilon:
                     with torch.no_grad():
                         obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
