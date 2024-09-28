@@ -71,7 +71,7 @@ This will start the training or evaluation process as configured.
 
 - **`utils/`**: Utility scripts necessary with environment initialization as well as model training and evaluation.
 
-### Bibliography/Credits
+### Bibliography
 
 1.	DQN (Deep Q-Learning Network):
 o	Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A. A., Veness, J., Bellemare, M. G., ... & Hassabis, D. (2015). Human-level control through deep reinforcement learning. Nature, 518(7540), 529-533.
