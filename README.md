@@ -29,6 +29,7 @@ shiny-MAS-main/
 │   ├── maddpg.py                # Multi-Agent Deep Deterministic Policy Gradient
 │
 └── utils/                       # Utility scripts for environment creation as well as training and evaluation
+    ├── reformatting.py          # Ensures proper formatting of output data
     ├── pettingzoo_env.py        # Environment initialization using PettingZoo
     ├── trainvaluateDQN.py       # Training and evaluation loops for DQN
     └── trainvaluateMADDPG.py    # Training and evaluation loops for MADDPG
