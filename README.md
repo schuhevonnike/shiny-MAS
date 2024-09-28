@@ -59,7 +59,8 @@ shiny-MAS-main/
 To run the main application, execute the `mainDQN.py` or `mainMADDPG.py` file:
 
 ```bash
-python mainDQN.py [--num_envs <desired number of environments>] ; [optional argument]
+python mainDQN.py [--num_envs <desired number of environments>]
+python mainMADDPG.py [--num_envs <desired number of environments>]
 ```
 
 This will start the training or evaluation process as configured.
