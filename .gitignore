@@ -3,4 +3,5 @@
 /.venv/
 /.idea/
 /trashbin.py
+/evaluation.py
 /.evaluation_data/

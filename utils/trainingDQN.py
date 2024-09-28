@@ -1,8 +1,7 @@
-import pandas as pd
 import random
 import numpy as np
 import torch
-from environments.pettingzoo_env import make_env
+from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
     env = make_env()

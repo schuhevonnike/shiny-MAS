@@ -220,10 +220,10 @@ def evaluate(agents, num_episodes=10, cooperative=False):
 #06.09.24 - Old training2.py:
 import torch
 from environments.pettingzoo_env2 import make_env
-from algorithms01.dqn import DQNAgent
-from algorithms01.maddpg import MADDPGAgent
-from algorithms01.ppo import PPOAgent
-from algorithms01.sac import SACAgent
+from algorithms.dqn import DQNAgent
+from algorithms.maddpg import MADDPGAgent
+from algorithms.ppo import PPOAgent
+from algorithms.sac import SACAgent
 
 
 def select_action(agent, observation, cooperative=False, other_agents=None):
@@ -361,10 +361,10 @@ import time
 import torch
 import pandas as pd
 from environments.pettingzoo_env2 import make_env
-from algorithms01.dqn import DQNAgent
-from algorithms01.maddpg import MADDPGAgent
-from algorithms01.ppo import PPOAgent
-from algorithms01.sac import SACAgent
+from algorithms.dqn import DQNAgent
+from algorithms.maddpg import MADDPGAgent
+from algorithms.ppo import PPOAgent
+from algorithms.sac import SACAgent
 
 def select_action(agent, observation, cooperative=False, other_agents=None):
     # Tipp: Diese Instanzen sind unnötig, besser ist es, diese Checks bei den einzelnen Lernalgorithmen mit einzubinden
@@ -488,10 +488,10 @@ import pandas as pd
 from torch.distributions.utils import logits_to_probs
 
 from environments.pettingzoo_env2 import make_env
-from algorithms01.dqn import DQNAgent
-from algorithms01.maddpg import MADDPGAgent
-from algorithms01.ppo import PPOAgent
-from algorithms01.sac import SACAgent
+from algorithms.dqn import DQNAgent
+from algorithms.maddpg import MADDPGAgent
+from algorithms.ppo import PPOAgent
+from algorithms.sac import SACAgent
 
 def select_action(agent, observation, cooperative=False, other_agents=None):
     with torch.no_grad():
@@ -745,10 +745,10 @@ import os
 import torch
 import pandas as pd
 from environments.pettingzoo_env2 import make_env
-from algorithms01.dqn import DQNAgent
-from algorithms01.maddpg import MADDPGAgent
-from algorithms01.ppo import PPOAgent
-from algorithms01.sac import SACAgent
+from algorithms.dqn import DQNAgent
+from algorithms.maddpg import MADDPGAgent
+from algorithms.ppo import PPOAgent
+from algorithms.sac import SACAgent
 
 def select_action(agent, observation, cooperative=False, other_agents=None):
     with torch.no_grad():

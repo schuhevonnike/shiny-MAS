@@ -72,7 +72,7 @@ from pettingzoo.mpe._mpe_utils.scenario import BaseScenario
 from pettingzoo.mpe._mpe_utils.simple_env import SimpleEnv, make_env
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 
-IsCooperative = False
+IsCooperative = True
 
 class raw_env(SimpleEnv, EzPickle):
     def __init__(

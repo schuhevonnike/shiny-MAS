@@ -1,7 +1,7 @@
 #import os
 #import pandas as pd
 import torch
-from environments.pettingzoo_env import make_env
+from utils.pettingzoo_env import make_env
 
 def evaluate(agents, num_episodes):
     env = make_env()
