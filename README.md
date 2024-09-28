@@ -9,8 +9,8 @@
 ```
 shiny-MAS-main/
 │
-├── mainDQN.py                      # Entry point of the application for deep Q-learning
-├── mainMADDPG.py                   # Entry point of the application for Multi-Agent Deep Deterministic Policy Gradient
+├── mainDQN.py                   # Entry point of the application for deep Q-learning
+├── mainMADDPG.py                # Entry point of the application for Multi-Agent Deep Deterministic Policy Gradient
 ├── requirements.txt             # Python dependencies for the project
 ├── .gitignore                   
 ├── .simple_tag.py               # A copy of the modified version of the PettingZoo environment                    
@@ -24,14 +24,14 @@ shiny-MAS-main/
 │   └── inspectionProfiles/
 │       └── profiles_settings.xml
 │
-├── algorithms/                # Implementation of online-sourced DRL algorithms (version 01, via PyTorch)
+├── algorithms/                  # Implementation of online-sourced DRL algorithms (version 01, via PyTorch)
 │   ├── dqn.py                   # Deep Q-Network
 │   ├── maddpg.py                # Multi-Agent Deep Deterministic Policy Gradient
 │
 └── utils/                       # Utility scripts for environment creation as well as training and evaluation
     ├── pettingzoo_env.py        # Environment initialization using PettingZoo
-    ├── trainingDQN.py           # Training and evaluation loops for DQN
-    └── trainingMADDPG.py        # Training and evaluation loops for MADDPG
+    ├── trainvaluateDQN.py       # Training and evaluation loops for DQN
+    └── trainvaluateMADDPG.py    # Training and evaluation loops for MADDPG
 ```
 
 ## Getting Started

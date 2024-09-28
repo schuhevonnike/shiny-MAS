@@ -1,8 +1,7 @@
 import torch
 import argparse
-import numpy as np
 from algorithms.maddpg import MADDPGAgent
-from utils.trainingMADDPG import train, evaluate
+from utils.trainvaluateMADDPG import train, evaluate
 from utils.pettingzoo_env import make_env
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

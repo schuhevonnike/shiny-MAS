@@ -1,12 +1,14 @@
+import os
 import random
 import numpy as np
+import pandas as pd
 import torch
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
-    #data_records = []
+    data_records = []
 
     for episode in range(num_episodes):
         env.reset()
@@ -52,7 +54,18 @@ def train(agents, num_episodes):
 
             last_observation[agent] = observation
             last_action[agent] = action
-            # Step the environment
+
+            # Log the step data in a pd.df
+            data_records.append({
+                'Episode': episode,
+                'Agent': agent,
+                'Action': action,
+                'Observation': observation,
+                'Reward': reward,
+                'Done': termination or truncation,
+            })
+
+            # Take a step in the environment
             env.step(action)
 
         for agent in agents:
@@ -69,37 +82,22 @@ def train(agents, num_episodes):
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
         print()
 
+        # Save the recorded data to a CSV
+        df_eval = pd.DataFrame(data_records)
+
+        if not os.path.exists('data_exportDQN'):
+            os.makedirs('data_exportDQN')
+
+        df_eval.to_csv('data_exportDQN/training_data.csv', index=False)
+        print(f"Training data saved to data_exportDQN/training_data.csv")
+
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
-
-            # Log the step data in a pd.df
-            #data_records.append({
-            #    'Episode': episode + 1,
-            #    'Agent': agent,
-            #    'Action': action,
-            #    'Observation': observation,
-            #    'Reward': reward,
-            #    'Total Reward': total_rewards[agent],
-            #    'Done': termination or truncation,
-            #})
-
-        #for agent in total_rewards:
-        #    rewards_history[agent].append(total_rewards[agent])
-        #print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
-        # Save the recorded data to a CSV
-        #df_eval = pd.DataFrame(data_records)
-
-        #if not os.path.exists('evaluation_data'):
-        #    os.makedirs('evaluation_data')
-
-        #df_eval.to_csv('evaluation_data/training_data.csv', index=False)
-        #print(f"Training data saved to evaluation_data/training_data.csv")
-        # Calculate and return average rewards for each training episode.
 
 def evaluate(agents, num_episodes):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
-    #data_records = []
+    data_records = []
 
     for episode in range(num_episodes):
         env.reset()
@@ -141,7 +139,18 @@ def evaluate(agents, num_episodes):
 
             last_observation[agent] = observation
             last_action[agent] = action
-            # Step the environment
+
+            # Log the step data in a pd.df
+            data_records.append({
+                'Episode': episode,
+                'Agent': agent,
+                'Action': action,
+                'Observation': observation,
+                'Reward': reward,
+                'Done': termination or truncation,
+            })
+
+            # Take a step in the environment
             env.step(action)
 
         for agent in agents:
@@ -157,6 +166,15 @@ def evaluate(agents, num_episodes):
         for agent in agents:
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
         print()
+
+        # Save the recorded data to a CSV
+        df_eval = pd.DataFrame(data_records)
+
+        if not os.path.exists('data_exportDQN'):
+            os.makedirs('data_exportDQN')
+
+        df_eval.to_csv('data_exportDQN/evaluation_data.csv', index=False)
+        print(f"Evaluation data saved to data_exportDQN/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
