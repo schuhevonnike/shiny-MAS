@@ -21,7 +21,8 @@ def train(agents, num_episodes):
         last_action = {agent: None for agent in env.possible_agents}
 
         for agent in env.agent_iter():
-            #env.reset()
+            env.reset()
+            #env.reset(seed=42)
             observation, reward, termination, truncation, _ = env.last()
             current_done = termination or truncation
             done[agent] = current_done
@@ -104,8 +105,8 @@ def evaluate(agents, num_episodes):
     #data_records = []
 
     for episode in range(num_episodes):
-        #env.reset()
-        env.reset(seed=42)
+        env.reset()
+        #env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
         done = {agent: False for agent in env.possible_agents}
