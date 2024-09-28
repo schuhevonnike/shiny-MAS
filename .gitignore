@@ -1,7 +1,6 @@
-/results/
 /.vscode/
 /.venv/
 /.idea/
-/trashbin.py
-/evaluation.py
-/.evaluation_data/
+/.data_exportDQN/
+/.data_exportMADDPG/
+evaluation.py
