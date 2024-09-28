@@ -1,5 +1,4 @@
-#import os
-#import pandas as pd
+import pandas as pd
 import random
 import numpy as np
 import torch
@@ -11,8 +10,8 @@ def train(agents, num_episodes):
     #data_records = []
 
     for episode in range(num_episodes):
-        env.reset()
-        # env.reset(seed=42)
+        #env.reset()
+        env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
         done = {agent: False for agent in env.possible_agents}
@@ -75,47 +74,16 @@ def train(agents, num_episodes):
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
 
-        #OLD LOOP Continue iterating until all agents are done - loop dismissed on 26.09.24
-        #while not all(done.values()):
-        #    for agent in env.agent_iter():
-                # Check if the agent is done. In that case, skip to next agent.
-        #        if done[agent]:
-        #            env.step(None)
-        #            continue
-                # Call the last() method to gather the relevant data from the last step taken in the environment.
-                # In the first iteration, the last step equals the initialization of the environment itself.
-                # Deprecate any remaining info (', _') .
-                # Observation = input, reward = target
-        #        observation, reward, termination, truncation, _ = env.last()
-                # Save observation and combine with next_observation.
-                # Select an action only if the agent is not done.
-        #        if not (termination or truncation):
-                    # Converts the dict of observations into a torch tensor. The unsqueeze() method adds a new dimension at index 0 which is suiting for batch processing.
-        #            obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-        #            with torch.no_grad():
-        #                action = torch.argmax(agents[agent].model(obs_tensor)).item()
-        #        else:
-        #            action = None  # Set action to None if the agent is marked as done.
-                # Update rewards after each action taken.
-        #        total_rewards[agent] += reward
-                # Step in the environment with the selected action.
-                # This instance skips to the next agent.
-        #        env.step(action)
-        #         This next line is still unresolved:
-        #       next_observation, reward, termination, truncation, _ = env.last()  # .last() refers to the current agent, in the case of adv_0 taking a step the next agent would then be adv_1
-        # However, we would need the next_observation of adv_0 instead
-        # #next_obs_tensor = torch.tensor(next_observation, dtype=torch.float32).unsqueeze(0).
-
-                # Log the step data in a pd.df
-                #data_records.append({
-                #    'Episode': episode + 1,
-                #    'Agent': agent,
-                #    'Action': action,
-                #    'Observation': observation,
-                #    'Reward': reward,
-                #    'Total Reward': total_rewards[agent],
-                #    'Done': termination or truncation,
-                #})
+            # Log the step data in a pd.df
+            #data_records.append({
+            #    'Episode': episode + 1,
+            #    'Agent': agent,
+            #    'Action': action,
+            #    'Observation': observation,
+            #    'Reward': reward,
+            #    'Total Reward': total_rewards[agent],
+            #    'Done': termination or truncation,
+            #})
 
         #for agent in total_rewards:
         #    rewards_history[agent].append(total_rewards[agent])
@@ -129,3 +97,69 @@ def train(agents, num_episodes):
         #df_eval.to_csv('evaluation_data/training_data.csv', index=False)
         #print(f"Training data saved to evaluation_data/training_data.csv")
         # Calculate and return average rewards for each training episode.
+
+def evaluate(agents, num_episodes):
+    env = make_env()
+    rewards_history = {agent: [] for agent in agents}
+    #data_records = []
+
+    for episode in range(num_episodes):
+        #env.reset()
+        env.reset(seed=42)
+        total_rewards = {agent: 0 for agent in env.possible_agents}
+        # Initialize done flag for tracking done state for each agent.
+        done = {agent: False for agent in env.possible_agents}
+
+        # Initialize storage for each agent's last observation and action
+        last_observation = {agent: None for agent in env.possible_agents}
+        last_action = {agent: None for agent in env.possible_agents}
+
+        for agent in env.agent_iter():
+            #env.reset()
+            observation, reward, termination, truncation, _ = env.last()
+            current_done = termination or truncation
+            done[agent] = current_done
+
+            # Update total rewards
+            total_rewards[agent] += reward
+
+            # If it's not the first turn for the agent, store the transition
+            if last_observation[agent] is not None and last_action[agent] is not None:
+                agents[agent].remember(
+                    state=last_observation[agent].copy(),
+                    action=last_action[agent],
+                    reward=reward,
+                    next_state=observation.copy(),
+                    done=current_done
+                )
+
+            # Select action
+            if not current_done:
+                with torch.no_grad():
+                    obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                    q_values = agents[agent].model(obs_tensor)
+                    action = torch.argmax(q_values).item()
+            else:
+                action = None
+
+            last_observation[agent] = observation
+            last_action[agent] = action
+            # Step the environment
+            env.step(action)
+
+        for agent in agents:
+            if len(agents[agent].memory) >= 256:
+                for i in range(100):
+                    agents[agent].update(256)
+
+        # Logging rewards at the end of each episode - modified 26.09.24
+        for agent in total_rewards:
+            rewards_history[agent].append(total_rewards[agent])
+        print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
+        print(f"Mean Reward last 100 Episodes:")
+        for agent in agents:
+            print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
+        print()
+
+    avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+    return avg_rewards

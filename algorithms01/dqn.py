@@ -84,24 +84,7 @@ class DQNAgent:
                 tensor = tensor[:, :desired_shape[1]]
         return tensor
 
-    # Old, initial act() method:
-    #def act(self, state, other_agents=None):
-    #    if np.random.rand() <= self.epsilon:
-    #        return random.randrange(self.action_size)
-    #    state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-    #    state = self.reshape_tensor(state, (1, self.input_dim))
-    #    q_values = self.model(state)
-
-    #    if self.cooperative and other_agents:
-    #        combined_q_values = q_values.clone()
-    #        for agent in other_agents:
-    #            combined_q_values += agent.model(state)
-    #        combined_q_values /= (1 + len(other_agents))
-    #        return torch.argmax(combined_q_values).item()
-    #    else:
-    #        return torch.argmax(q_values).item()
-
-    #Adjusted act() method:
+    #Adjusted act() method [no longer necessary, direct implementation in the training loop]:
     #def act(self, state, other_agents=None):
         # Ensure action is within the valid range
     #    action = random.randrange(self.action_size)
@@ -142,61 +125,12 @@ class DQNAgent:
         # Compute Q(s_t, a)
         state_action_values = self.model(states).gather(1, actions.unsqueeze(1))
 
-        # Old for loop
-        #for state, action, reward, next_state, done in minibatch:
-        #    state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        #    state = self.reshape_tensor(state, (1, self.input_dim))
-            # print(f"Shape of input tensor 'state': {state.shape}")
-
-        #    next_state = torch.tensor(next_state, dtype=torch.float32).unsqueeze(0)
-            #next_state = next_state.clone().detach().requires_grad_(True)
-
-        #    next_state = self.reshape_tensor(next_state, (1, self.input_dim))
-            # print(f"Shape of input tensor 'next_state': {next_state.shape}")
-
-        #    assert state.shape[1] == self.input_dim, f"State dimension mismatch: {state.shape[1]} vs {self.input_dim}"
-        #    assert next_state.shape[1] == self.input_dim, f"Next state dimension mismatch: {next_state.shape[1]} vs {self.input_dim}"
-
-            # reward = reward.clone().detach().float().unsqueeze(0)
-        #    reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(0)
-            # done = done.clone().detach().float().unsqueeze(0)
-        #    done = torch.tensor(done, dtype=torch.float32).unsqueeze(0)
-        #    target = reward.clone()
-
-        #    if not done.item():
-        #        with torch.no_grad():
-        #            next_state_value = self.model(next_state).max(1)[0]
-                    # next_state_value = self.model(next_state)
-                    # print(f"Next state value shape: {next_state_value.shape}")
-        #        target = reward + (1 - done) * self.gamma * next_state_value
-                #target += self.gamma * torch.max(next_state_value)
-        #    output = self.model(state)[0, action]
-        #    target = target.unsqueeze(1)
-        #    output = output.unsqueeze(0)
-
         with torch.no_grad():
             # Use target network for next state value estimation
             next_state_values = self.target_model(next_states).max(1)[0]
             # Set next_state_values to zero where done is True
             next_state_values[dones] = 0.0
             expected_state_action_values = rewards + (self.gamma * next_state_values)
-
-            # Fix target shape if it is a scalar or has incompatible shape
-            # if target.dim() == 1:  # If target is a vector
-            #    target = target.expand(output.shape)
-            # elif target.dim() == 0:  # If target is a scalar
-            #    target = torch.full_like(output, target.item())
-
-            # target = torch.tensor(target, dtype=torch.float32).unsqueeze(0)
-            # print(f"Shape of target tensor: {target.shape}")
-
-            # Ensure target and output are of the same shape
-            # assert output.shape == target.shape, f"Output shape {output.shape} does not match target shape {target.shape}"
-
-            # Debug prints to ensure no NaNs or invalid values
-            #if torch.isnan(output).any() or torch.isnan(target).any():
-            #    print("NaN detected in output or target!")
-            #    continue
 
         # Loss calculation
         loss = self.criterion(state_action_values.squeeze(), expected_state_action_values)
