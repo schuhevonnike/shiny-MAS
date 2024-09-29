@@ -41,6 +41,6 @@ def run_experiment(env_fn, num_episodes):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py mainDQN.py (--num_episodes)")
-    parser.add_argument('--num_episodes', type=int, default=12400, help='Number of episodes for training each group of agents')
+    parser.add_argument('--num_episodes', type=int, default=12, help='Number of episodes for training each group of agents')
     args = parser.parse_args()
     run_experiment(env_fn=make_env, num_episodes=args.num_episodes)

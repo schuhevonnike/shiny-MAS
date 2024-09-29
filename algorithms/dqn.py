@@ -27,7 +27,7 @@ class DQNAgent:
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.min_epsilon = min_epsilon
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=10000)
         self.model = DQN(state_size, action_size)
         self.target_model = DQN(state_size, action_size)        # Added 26.09
         self.update_steps = 0                                   # Added 26.09
@@ -35,8 +35,9 @@ class DQNAgent:
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
 
+    @staticmethod
     # New, reformulated reshape_tensor() method
-    def reshape_tensor(self, tensor, desired_shape):
+    def reshape_tensor(tensor, desired_shape):
         if len(desired_shape) == 2 and tensor.dim() > 2:
             # Flatten the tensor except for the batch dimension
             tensor = tensor.view(tensor.size(0), -1)
@@ -49,32 +50,6 @@ class DQNAgent:
             elif tensor.shape[1] > desired_shape[1]:
                 tensor = tensor[:, :desired_shape[1]]
         return tensor
-
-    # Outdated act()-method, since the logic was implemented inside the train()-method.
-    #def act(self, state, other_agents=None):
-        # Ensure action is within the valid range
-    #    action = random.randrange(self.action_size)
-        #Epsilon-greedy
-    #    if np.random.rand() > self.epsilon:
-    #        state = torch.tensor(state, dtype=torch.float32).clone().detach().unsqueeze(0)
-            #state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-    #        state = self.reshape_tensor(state, (1, self.input_dim))
-    #        q_values = self.model(state)
-            # if-check for cooperative behaviour, needs fine-tuning
-            #if self.cooperative and other_agents:
-            #    combined_q_values = q_values.clone()
-            #    for agent in other_agents:
-            #        combined_q_values += agent.model(state)
-            #    combined_q_values /= (1 + len(other_agents))
-            #    action = torch.argmax(combined_q_values).item()
-            #else:
-    #        action = torch.argmax(q_values).item()
-        # Add debug prints to ensure action is valid
-        #print(f"Selected action: {action}")
-    #   return action
-
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
 
     def update(self, batch_size=32):
         if len(self.memory) < batch_size:
@@ -117,4 +92,7 @@ class DQNAgent:
         self.update_steps += 1
         if self.update_steps % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
+
+    def remember(self, state, action, reward, next_state, done: bool):
+        self.memory.append((state, action, reward, next_state, done))
 
