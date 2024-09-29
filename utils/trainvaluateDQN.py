@@ -51,7 +51,7 @@ def train(agents, num_episodes):
                     action = env.action_space(agent).sample()
             else:
                 action = None
-
+            print(action)
             last_observation[agent] = observation
             last_action[agent] = action
 

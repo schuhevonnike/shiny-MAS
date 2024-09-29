@@ -32,7 +32,8 @@ def train(agents, num_episodes):
             # If it's not the first turn for the agent, store the transition
             if last_observation[agent] is not None and last_action[agent] is not None:
                 agents[agent].remember(
-                    state=last_observation[agent].copy(),
+                    #state=last_observation[agent].copy(),
+                    state=last_observation[agent],
                     action=last_action[agent],
                     reward=reward,
                     next_state=observation.copy(),
@@ -41,14 +42,22 @@ def train(agents, num_episodes):
 
             # Select action
             if not current_done:
-                # Epsilon greedy implementation
-                if random.random() > agents[agent].epsilon:
-                    with torch.no_grad():
-                        obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                        q_values = agents[agent].model(obs_tensor)
-                        action = torch.argmax(q_values).item()
-                else:
-                    action = env.action_space(agent).sample()
+                # Version 1 of action selection - a loop with close resemblance to the DQN variant
+                with torch.no_grad():
+                    obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                    # Select an action based on the current policy.
+                    #action = agents[agent].actor(obs_tensor).detach().numpy()[0]
+                    action = agents[agent].actor(obs_tensor).squeeze(0).numpy()
+                agents[agent].actor.train()
+                action += 0.1 * np.random.randn(*action.shape)  # Add exploration noise
+                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
+
+                # Version 2 of action selection
+                # Select an action based on the current policy.
+                #observation = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                #action = agents[agent].actor(observation).detach().numpy()[0]
+                #action += 0.1 * np.random.randn(*action.shape)  # Add exploration noise (float = 0.1)
+                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
             else:
                 action = None
 
@@ -68,18 +77,19 @@ def train(agents, num_episodes):
             # Take a step in the environment
             env.step(action)
 
+        # Update agents
         for agent in agents:
-            if len(agents[agent].memory) >= 256:
-                for i in range(100):
-                    agents[agent].update(256)
+            other_agent = next(a for a in agents.values() if a != agents[agent])
+            agents[agent].update(other_agent)
 
-        # Logging rewards at the end of each episode - modified 26.09.24
+        # Logging rewards at the end of each episode
         for agent in total_rewards:
             rewards_history[agent].append(total_rewards[agent])
         print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
-            print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
+            #print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
+            print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -92,6 +102,8 @@ def train(agents, num_episodes):
         print(f"Training data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+    #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
+    print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
     return avg_rewards
 
 def evaluate(agents, num_episodes):
@@ -122,6 +134,7 @@ def evaluate(agents, num_episodes):
             if last_observation[agent] is not None and last_action[agent] is not None:
                 agents[agent].remember(
                     state=last_observation[agent].copy(),
+                    #state=last_observation[agent],
                     action=last_action[agent],
                     reward=reward,
                     next_state=observation.copy(),
@@ -130,10 +143,15 @@ def evaluate(agents, num_episodes):
 
             # Select action
             if not current_done:
+                # Loop with close resemblance to the DQN variant
                 with torch.no_grad():
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    q_values = agents[agent].model(obs_tensor)
-                    action = torch.argmax(q_values).item()
+                    # Select an action based on the current policy.
+                    #action = agents[agent].actor(obs_tensor).detach().numpy()[0]
+                    action = agents[agent].actor(obs_tensor).squeeze(0).numpy()
+                agents[agent].actor.train()
+                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
+
             else:
                 action = None
 
@@ -153,10 +171,10 @@ def evaluate(agents, num_episodes):
             # Take a step in the environment
             env.step(action)
 
+        # Update agents
         for agent in agents:
-            if len(agents[agent].memory) >= 256:
-                for i in range(100):
-                    agents[agent].update(256)
+            other_agent = next(a for a in agents.values() if a != agents[agent])
+            agents[agent].update(other_agent)
 
         # Logging rewards at the end of each episode - modified 26.09.24
         for agent in total_rewards:
@@ -165,6 +183,7 @@ def evaluate(agents, num_episodes):
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
+            print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -177,4 +196,6 @@ def evaluate(agents, num_episodes):
         print(f"Evaluation data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
+    # avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
+    print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
     return avg_rewards

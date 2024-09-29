@@ -26,6 +26,7 @@ def run_experiment(env_fn, num_episodes):
     # Training agents:
     print("\nTraining Individual Agents:")
     avg_training_rewards = train(cooperative_agents, num_episodes=num_episodes)
+    print(f"Type of avg_training_rewards in run_experiment: {type(avg_training_rewards)}") # Debugging
     # Print average individual agent training results:
     print("\nAverage Training Rewards for Individual Agents:")
     for agent, reward in avg_training_rewards.items():
