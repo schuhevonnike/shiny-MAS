@@ -15,7 +15,7 @@ def initialize_agents(env):
         state_size = env.observation_space(agent_id).shape[0]
         action_size = env.action_space(agent_id).n
         # Create agents that inherit the attributes from the DQNAgent class.
-        agents[agent_id] = MADDPGAgent(state_size, action_size)
+        agents[agent_id] = MADDPGAgent(agent_id, state_size, action_size)
     return agents
 
 def run_experiment(env_fn, num_episodes):

@@ -3,6 +3,9 @@ import random
 import numpy as np
 import pandas as pd
 import torch
+from pettingzoo.classic.chess.chess_utils import actions_to_moves
+from torchgen.gen_vmap_plumbing import accepts_at_least_one_tensor_input
+
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
@@ -42,22 +45,18 @@ def train(agents, num_episodes):
 
             # Select action
             if not current_done:
-                # Version 1 of action selection - a loop with close resemblance to the DQN variant
                 with torch.no_grad():
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    # Select an action based on the current policy.
-                    #action = agents[agent].actor(obs_tensor).detach().numpy()[0]
-                    action = agents[agent].actor(obs_tensor).squeeze(0).numpy()
+                    # Retrieve action probabilities or Q-values from the actor network
+                    action_probs = agents[agent].actor(obs_tensor)
+                    # Select action based on the highest action probability
+                    action = torch.argmax(action_probs).item()
                 agents[agent].actor.train()
-                action += 0.1 * np.random.randn(*action.shape)  # Add exploration noise
-                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
-
-                # Version 2 of action selection
-                # Select an action based on the current policy.
-                #observation = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                #action = agents[agent].actor(observation).detach().numpy()[0]
-                #action += 0.1 * np.random.randn(*action.shape)  # Add exploration noise (float = 0.1)
-                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
+                # Add exploration noise for training
+                #action += 0.01 * np.random.randn(*action.shape)
+                #if np.random.rand() < 0.01:
+                #    action = np.random.rand(env.action_space.n)
+                #return action
             else:
                 action = None
 
@@ -78,9 +77,15 @@ def train(agents, num_episodes):
             env.step(action)
 
         # Update agents
-        for agent in agents:
-            other_agent = next(a for a in agents.values() if a != agents[agent])
-            agents[agent].update(other_agent)
+        #for agent_id in agents.keys():
+        #    other_agent_id = next(a_id for a_id in agents.keys() if a_id != agent_id)
+        #    agents[agent_id].update(other_agent_id, agents)
+
+        for agent_id in agents:
+            if len(agents[agent_id].memory) >= 256:
+                for other_agent_id in agents:
+                    if other_agent_id != agent_id:  # Ensure we are updating with another agent
+                        agents[agent_id].update(other_agent_id, agents)
 
         # Logging rewards at the end of each episode
         for agent in total_rewards:
@@ -88,8 +93,8 @@ def train(agents, num_episodes):
         print(f"Episode {episode + 1}/{num_episodes} | Total Rewards: {total_rewards}")
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
-            #print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
-            print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
+            print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
+            #print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -146,12 +151,11 @@ def evaluate(agents, num_episodes):
                 # Loop with close resemblance to the DQN variant
                 with torch.no_grad():
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    # Select an action based on the current policy.
-                    #action = agents[agent].actor(obs_tensor).detach().numpy()[0]
-                    action = agents[agent].actor(obs_tensor).squeeze(0).numpy()
+                    # Retrieve action probabilities or Q-values from the actor network
+                    action_probs = agents[agent].actor(obs_tensor)
+                    # Select action based on the highest action probability
+                    action = torch.argmax(action_probs).item()
                 agents[agent].actor.train()
-                #return np.clip(action, -1, 1)  # Assuming action space [-1, 1]
-
             else:
                 action = None
 
@@ -183,7 +187,7 @@ def evaluate(agents, num_episodes):
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
-            print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
+            #print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -196,6 +200,6 @@ def evaluate(agents, num_episodes):
         print(f"Evaluation data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
-    # avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
+    #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
     print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
     return avg_rewards

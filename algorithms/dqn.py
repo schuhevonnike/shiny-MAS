@@ -23,15 +23,16 @@ class DQNAgent:
                  epsilon_decay=0.9999, min_epsilon=0.01, target_update_freq=1000):
         self.input_dim = state_size
         self.action_size = action_size
+
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.min_epsilon = min_epsilon
         self.memory = deque(maxlen=10000)
         self.model = DQN(state_size, action_size)
-        self.target_model = DQN(state_size, action_size)        # Added 26.09
-        self.update_steps = 0                                   # Added 26.09
-        self.target_update_freq = target_update_freq            # Added 26.09
+        self.target_model = DQN(state_size, action_size)
+        self.update_steps = 0
+        self.target_update_freq = target_update_freq
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         self.criterion = nn.MSELoss()
 
