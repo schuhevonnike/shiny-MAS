@@ -49,31 +49,35 @@ def train(agents, num_episodes):
             if not current_done:
                 with torch.no_grad():
                     # Convert last_action to tensor, handling None values
-                    if last_action[agent] is None:
+                    #if last_action[agent] is None:
                         # Initialize a default action if None, e.g., zeros
-                        last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
-                    else:
+                    #    last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
+                    #else:
                         # Use the actual last action if available
-                        last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
+                    #    last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    print(f"Observation tensor: {obs_tensor}")          # Debugging
-                    print(f"Last action tensor: {last_action_tensor}")  # Debugging
+                    #print(f"Observation tensor: {obs_tensor}")          # Debugging
+                    #print(f"Last action tensor: {last_action_tensor}")  # Debugging
 
                     action_probs = agents[agent].actor(obs_tensor).detach()
 
                     # Apply softmax to convert logits to probabilities
                     action_probs = torch.softmax(action_probs, -1)
-                    print(f"Action probs: {action_probs}")
+                    #print(f"Action probs: {action_probs}")
 
-                    action = torch.multinomial(action_probs.view(-1),1).item()  # Sample directly from the action probabilities
-                    #action = torch.multinomial(action_probs.squeeze(0), 1).item()  # Sample directly from the action probabilities
+                    #  Note: all three ways of collecting/sampling actions works with the one-hot encoding
+                    #action = torch.argmax(action_probs).item()
+                    #action = torch.multinomial(action_probs.view(-1),1).item()
+                    action = torch.multinomial(action_probs.squeeze(0), 1).item()
+
+                    # Exploration currently missing
                     #action = action_probs[0] + 0,1 * np.random.randn(*action_probs[0].shape)
-                    print(f"Action: {action}")
+                    #print(f"Action: {action}")
 
                     # Convert action to one-hot encoding for shape [32, 5]
                     one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
                     one_hot_action[action] = 1.0
-                    print(f"One-hot action: {one_hot_action}")
+                    #print(f"One-hot action: {one_hot_action}")
 
             else:
                 action = None
@@ -93,11 +97,6 @@ def train(agents, num_episodes):
 
             # Take a step in the environment
             env.step(action)
-
-        # Update agents
-        #for agent_id in agents.keys():
-        #    other_agent_id = next(a_id for a_id in agents.keys() if a_id != agent_id)
-        #    agents[agent_id].update(other_agent_id, agents)
 
         for agent_id in agents:
             if len(agents[agent_id].memory) >= 256:
@@ -166,19 +165,41 @@ def evaluate(agents, num_episodes):
 
             # Select action
             if not current_done:
-                # Loop with close resemblance to the DQN variant
                 with torch.no_grad():
+                    # Convert last_action to tensor, handling None values
+                    # if last_action[agent] is None:
+                    # Initialize a default action if None, e.g., zeros
+                    #    last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
+                    # else:
+                    # Use the actual last action if available
+                    #    last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    # Retrieve action probabilities or Q-values from the actor network
-                    action_probs = agents[agent].actor(obs_tensor)
-                    # Select action based on the highest action probability
-                    action = torch.argmax(action_probs).item()
-                agents[agent].actor.train()
+                    # print(f"Observation tensor: {obs_tensor}")          # Debugging
+                    # print(f"Last action tensor: {last_action_tensor}")  # Debugging
+
+                    action_probs = agents[agent].actor(obs_tensor).detach()
+
+                    # Apply softmax to convert logits to probabilities
+                    action_probs = torch.softmax(action_probs, -1)
+                    # print(f"Action probs: {action_probs}")
+
+                    #  Note: all three ways of collecting/sampling actions works with the one-hot encoding
+                    # action = torch.argmax(action_probs).item()
+                    # action = torch.multinomial(action_probs.view(-1),1).item()
+                    action = torch.multinomial(action_probs.squeeze(0), 1).item()
+
+                    # Exploration off for evaluating
+
+                    # Convert action to one-hot encoding for shape [32, 5]
+                    one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
+                    one_hot_action[action] = 1.0
+                    # print(f"One-hot action: {one_hot_action}")
+
             else:
                 action = None
 
             last_observation[agent] = observation
-            last_action[agent] = action
+            last_action[agent] = one_hot_action
 
             # Log the step data in a pd.df
             data_records.append({
@@ -196,11 +217,9 @@ def evaluate(agents, num_episodes):
         # Update agents
         for agent_id in agents:
             if len(agents[agent_id].memory) >= 256:
-                other_agents = [agents[a] for a in agents if a != agent_id]
-                agents[agent_id].update(other_agents)
-        #for agent in agents:
-        #    other_agent = next(a for a in agents.values() if a != agents[agent])
-        #    agents[agent].update(other_agent)
+                for other_agent_id in agents:
+                    if other_agent_id != agent_id:  # Ensure we are updating with another agent
+                        agents[agent_id].update(other_agent_id, agents)
 
         # Logging rewards at the end of each episode - modified 26.09.24
         for agent in total_rewards:
