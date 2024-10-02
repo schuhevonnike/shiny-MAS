@@ -4,4 +4,3 @@
 /.data_exportDQN/
 /.data_exportMADDPG/
 evaluation.py
-trash.py
