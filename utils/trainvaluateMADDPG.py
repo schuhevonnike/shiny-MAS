@@ -4,11 +4,13 @@ import numpy as np
 import pandas as pd
 import torch
 from pettingzoo.classic.chess.chess_utils import actions_to_moves
+from sympy.codegen import Print
 from torchgen.gen_vmap_plumbing import accepts_at_least_one_tensor_input
 
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
+    global agent
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
@@ -47,16 +49,29 @@ def train(agents, num_episodes):
             if not current_done:
                 with torch.no_grad():
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    # Retrieve action probabilities or Q-values from the actor network
-                    action_probs = agents[agent].actor(obs_tensor)
-                    # Select action based on the highest action probability
-                    action = torch.argmax(action_probs).item()
-                agents[agent].actor.train()
-                # Add exploration noise for training
-                #action += 0.01 * np.random.randn(*action.shape)
-                #if np.random.rand() < 0.01:
-                #    action = np.random.rand(env.action_space.n)
-                #return action
+                    action_probs = agents[agent].actor(obs_tensor).detach()
+                    #action_probs = agents[agent].actor(obs_tensor)
+                    print(action_probs)
+                    #print(action_probs)
+                    #action = action_probs[0] + 0,1 * np.random.randn(*action_probs[0].shape)
+
+                    # Apply softmax to convert logits to probabilities
+                    #action_probs = torch.softmax(action_probs, 1)
+
+                    #action = agents[agent].target_actor(action_probs)
+                    #action = agents[agent].target_actor(obs_tensor)
+                    action = torch.multinomial(action_probs, 1).item()  # Sample directly from the action probabilities
+                    print(action)
+                    #action = np.clip(action, 0, 1)
+                    #print(action)
+
+
+                    # Sample an action from the action probabilities
+
+                    # Optionally add Gaussian noise as an additional strategy
+                    #if np.random.rand() < 0.1:  # Exploration probability
+                    #    noise_action = np.random.randint(0, 5)  # Random action from the action space
+                    #    action = noise_action
             else:
                 action = None
 
@@ -176,9 +191,13 @@ def evaluate(agents, num_episodes):
             env.step(action)
 
         # Update agents
-        for agent in agents:
-            other_agent = next(a for a in agents.values() if a != agents[agent])
-            agents[agent].update(other_agent)
+        for agent_id in agents:
+            if len(agents[agent_id].memory) >= 256:
+                other_agents = [agents[a] for a in agents if a != agent_id]
+                agents[agent_id].update(other_agents)
+        #for agent in agents:
+        #    other_agent = next(a for a in agents.values() if a != agents[agent])
+        #    agents[agent].update(other_agent)
 
         # Logging rewards at the end of each episode - modified 26.09.24
         for agent in total_rewards:
