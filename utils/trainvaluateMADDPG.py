@@ -78,7 +78,6 @@ def train(agents, num_episodes):
                     one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
                     one_hot_action[action] = 1.0
                     #print(f"One-hot action: {one_hot_action}")
-
             else:
                 action = None
 
