@@ -65,7 +65,7 @@ def train(agents, num_episodes):
                     action_probs = torch.softmax(action_probs, -1)
                     #print(f"Action probs: {action_probs}")
 
-                    #  Note: all three ways of collecting/sampling actions works with the one-hot encoding
+                    # Note: all three ways of collecting/sampling actions works with the one-hot encoding
                     #action = torch.argmax(action_probs).item()
                     #action = torch.multinomial(action_probs.view(-1),1).item()
                     action = torch.multinomial(action_probs.squeeze(0), 1).item()
@@ -166,22 +166,10 @@ def evaluate(agents, num_episodes):
             # Select action
             if not current_done:
                 with torch.no_grad():
-                    # Convert last_action to tensor, handling None values
-                    # if last_action[agent] is None:
-                    # Initialize a default action if None, e.g., zeros
-                    #    last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
-                    # else:
-                    # Use the actual last action if available
-                    #    last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    # print(f"Observation tensor: {obs_tensor}")          # Debugging
-                    # print(f"Last action tensor: {last_action_tensor}")  # Debugging
-
                     action_probs = agents[agent].actor(obs_tensor).detach()
-
                     # Apply softmax to convert logits to probabilities
                     action_probs = torch.softmax(action_probs, -1)
-                    # print(f"Action probs: {action_probs}")
 
                     #  Note: all three ways of collecting/sampling actions works with the one-hot encoding
                     # action = torch.argmax(action_probs).item()
@@ -193,8 +181,6 @@ def evaluate(agents, num_episodes):
                     # Convert action to one-hot encoding for shape [32, 5]
                     one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
                     one_hot_action[action] = 1.0
-                    # print(f"One-hot action: {one_hot_action}")
-
             else:
                 action = None
 
