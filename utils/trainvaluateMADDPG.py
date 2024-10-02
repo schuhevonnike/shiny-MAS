@@ -121,11 +121,11 @@ def train(agents, num_episodes):
             os.makedirs('data_exportMADDPG')
 
         df_eval.to_csv('data_exportMADDPG/training_data.csv', index=False)
-        print(f"Training data saved to data_exportMADDPG/training_data.csv")
+        print(f"\nTraining data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
-    print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
+    #print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
     return avg_rewards
 
 def evaluate(agents, num_episodes):
@@ -238,9 +238,9 @@ def evaluate(agents, num_episodes):
             os.makedirs('data_exportMADDPG')
 
         df_eval.to_csv('data_exportMADDPG/evaluation_data.csv', index=False)
-        print(f"Evaluation data saved to data_exportMADDPG/training_data.csv")
+        print(f"\nEvaluation data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
-    print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
+    #print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
     return avg_rewards
