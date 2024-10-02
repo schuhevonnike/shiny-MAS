@@ -39,3 +39,4 @@ termcolor==2.4.0
 torch==2.2.2
 typing_extensions==4.12.2
 tzdata==2024.1
+matplotlib==3.9.2
