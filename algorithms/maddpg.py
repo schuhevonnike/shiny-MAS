@@ -10,7 +10,7 @@ from torch.onnx.symbolic_opset11 import unsqueeze
 
 # Define actor network
 class Actor(nn.Module):
-    def __init__(self, state_size, action_size, hidden_size=32):
+    def __init__(self, state_size, action_size, hidden_size=64):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(state_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
@@ -23,11 +23,11 @@ class Actor(nn.Module):
 
 # Define critic network
 class Critic(nn.Module):
-    def __init__(self, state_size, action_size, hidden_size=32):
+    def __init__(self, state_size, action_size, hidden_size=64):
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(state_size + action_size, hidden_size)  # Combined state and action
-        self.fc2 = nn.Linear(hidden_size, 32)
-        self.fc3 = nn.Linear(32, action_size)
+        self.fc2 = nn.Linear(hidden_size, 64)
+        self.fc3 = nn.Linear(64, action_size)
 
     def forward(self, state, action):
         # Ensure that both state and action are 2D tensors with batch size as the first dimension
