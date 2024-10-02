@@ -1,12 +1,7 @@
 import os
-import random
 import numpy as np
 import pandas as pd
 import torch
-from pettingzoo.classic.chess.chess_utils import actions_to_moves
-from sympy.codegen import Print
-from torchgen.gen_vmap_plumbing import accepts_at_least_one_tensor_input
-
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
@@ -49,17 +44,9 @@ def train(agents, num_episodes):
                 with torch.no_grad():
                     # Gather current tau value
                     tau = agents[agent].tau
-                    # Convert last_action to tensor, handling None values
-                    #if last_action[agent] is None:
-                        # Initialize a default action if None, e.g., zeros
-                    #    last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
-                    #else:
-                        # Use the actual last action if available
-                    #    last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
                     # print(f"Observation tensor: {obs_tensor}")          # Debugging
                     # print(f"Last action tensor: {last_action_tensor}")  # Debugging
-
                     action_probs = agents[agent].actor(obs_tensor).detach()
                     # Apply softmax to convert logits to probabilities, add exploration noise - divide by tau
                     action_probs = torch.softmax(action_probs/tau, -1)
@@ -95,7 +82,9 @@ def train(agents, num_episodes):
             env.step(action)
 
         for agent_id in agents:
+            # Update exploration parameter tau
             agents[agent_id].tau = max(agents[agent_id].tau * agents[agent_id].tau_decay, agents[agent_id].tau_min)
+            # Update agents memory, if necessary
             if len(agents[agent_id].memory) >= 256:
                 for other_agent_id in agents:
                     if other_agent_id != agent_id:  # Ensure we are updating with another agent
