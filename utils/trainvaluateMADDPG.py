@@ -10,7 +10,6 @@ from torchgen.gen_vmap_plumbing import accepts_at_least_one_tensor_input
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
-    #global agent
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
@@ -48,6 +47,8 @@ def train(agents, num_episodes):
             # Select action
             if not current_done:
                 with torch.no_grad():
+                    # Gather current tau value
+                    tau = agents[agent].tau
                     # Convert last_action to tensor, handling None values
                     #if last_action[agent] is None:
                         # Initialize a default action if None, e.g., zeros
@@ -56,28 +57,24 @@ def train(agents, num_episodes):
                         # Use the actual last action if available
                     #    last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
-                    #print(f"Observation tensor: {obs_tensor}")          # Debugging
-                    #print(f"Last action tensor: {last_action_tensor}")  # Debugging
+                    # print(f"Observation tensor: {obs_tensor}")          # Debugging
+                    # print(f"Last action tensor: {last_action_tensor}")  # Debugging
 
                     action_probs = agents[agent].actor(obs_tensor).detach()
-
-                    # Apply softmax to convert logits to probabilities
-                    action_probs = torch.softmax(action_probs, -1)
-                    #print(f"Action probs: {action_probs}")
+                    # Apply softmax to convert logits to probabilities, add exploration noise - divide by tau
+                    action_probs = torch.softmax(action_probs/tau, -1)
+                    # print(f"Action probs: {action_probs}")
 
                     # Note: all three ways of collecting/sampling actions works with the one-hot encoding
-                    #action = torch.argmax(action_probs).item()
-                    #action = torch.multinomial(action_probs.view(-1),1).item()
-                    action = torch.multinomial(action_probs.squeeze(0), 1).item()
-
-                    # Exploration currently missing
-                    #action = action_probs[0] + 0,1 * np.random.randn(*action_probs[0].shape)
-                    #print(f"Action: {action}")
+                    action = torch.argmax(action_probs).item()
+                    # action = torch.multinomial(action_probs.view(-1),1).item()
+                    # action = torch.multinomial(action_probs.squeeze(0), 1).item()
+                    # print(f"Action: {action}")
 
                     # Convert action to one-hot encoding for shape [32, 5]
                     one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
                     one_hot_action[action] = 1.0
-                    #print(f"One-hot action: {one_hot_action}")
+                    # print(f"One-hot action: {one_hot_action}")
             else:
                 action = None
 
@@ -98,6 +95,7 @@ def train(agents, num_episodes):
             env.step(action)
 
         for agent_id in agents:
+            agents[agent_id].tau = max(agents[agent_id].tau * agents[agent_id].tau_decay, agents[agent_id].tau_min)
             if len(agents[agent_id].memory) >= 256:
                 for other_agent_id in agents:
                     if other_agent_id != agent_id:  # Ensure we are updating with another agent
@@ -110,7 +108,7 @@ def train(agents, num_episodes):
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
-            #print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
+            # print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -124,7 +122,7 @@ def train(agents, num_episodes):
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
-    #print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
+    # print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
     return avg_rewards
 
 def evaluate(agents, num_episodes):
@@ -170,10 +168,10 @@ def evaluate(agents, num_episodes):
                     # Apply softmax to convert logits to probabilities
                     action_probs = torch.softmax(action_probs, -1)
 
-                    #  Note: all three ways of collecting/sampling actions works with the one-hot encoding
-                    # action = torch.argmax(action_probs).item()
+                    # Note: all three ways of collecting/sampling actions works with the one-hot encoding
+                    action = torch.argmax(action_probs).item()
                     # action = torch.multinomial(action_probs.view(-1),1).item()
-                    action = torch.multinomial(action_probs.squeeze(0), 1).item()
+                    # action = torch.multinomial(action_probs.squeeze(0), 1).item()
 
                     # Exploration off for evaluating
 
@@ -213,7 +211,7 @@ def evaluate(agents, num_episodes):
         print(f"Mean Reward last 100 Episodes:")
         for agent in agents:
             print(f"Agent {agent} Reward: {np.array(rewards_history[agent][-100:]).mean()}")
-            #print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
+            # print(f"Agent {agent} Reward: {np.mean(rewards_history[agent][-100:])}")
         print()
 
         # Save the recorded data to a CSV
@@ -227,5 +225,5 @@ def evaluate(agents, num_episodes):
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
-    #print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
+    # print(f"Type of avg_rewards in train: {type(avg_rewards)}")  # Debugging
     return avg_rewards
