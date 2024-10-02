@@ -10,7 +10,7 @@ from torchgen.gen_vmap_plumbing import accepts_at_least_one_tensor_input
 from utils.pettingzoo_env import make_env
 
 def train(agents, num_episodes):
-    global agent
+    #global agent
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
@@ -48,35 +48,38 @@ def train(agents, num_episodes):
             # Select action
             if not current_done:
                 with torch.no_grad():
+                    # Convert last_action to tensor, handling None values
+                    if last_action[agent] is None:
+                        # Initialize a default action if None, e.g., zeros
+                        last_action_tensor = torch.zeros(agents[agent].action_size).unsqueeze(0)
+                    else:
+                        # Use the actual last action if available
+                        last_action_tensor = torch.tensor(last_action[agent], dtype=torch.float32).unsqueeze(0)
                     obs_tensor = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
+                    print(f"Observation tensor: {obs_tensor}")          # Debugging
+                    print(f"Last action tensor: {last_action_tensor}")  # Debugging
+
                     action_probs = agents[agent].actor(obs_tensor).detach()
-                    #action_probs = agents[agent].actor(obs_tensor)
-                    print(action_probs)
-                    #print(action_probs)
-                    #action = action_probs[0] + 0,1 * np.random.randn(*action_probs[0].shape)
 
                     # Apply softmax to convert logits to probabilities
-                    #action_probs = torch.softmax(action_probs, 1)
+                    action_probs = torch.softmax(action_probs, -1)
+                    print(f"Action probs: {action_probs}")
 
-                    #action = agents[agent].target_actor(action_probs)
-                    #action = agents[agent].target_actor(obs_tensor)
-                    action = torch.multinomial(action_probs, 1).item()  # Sample directly from the action probabilities
-                    print(action)
-                    #action = np.clip(action, 0, 1)
-                    #print(action)
+                    action = torch.multinomial(action_probs.view(-1),1).item()  # Sample directly from the action probabilities
+                    #action = torch.multinomial(action_probs.squeeze(0), 1).item()  # Sample directly from the action probabilities
+                    #action = action_probs[0] + 0,1 * np.random.randn(*action_probs[0].shape)
+                    print(f"Action: {action}")
 
+                    # Convert action to one-hot encoding for shape [32, 5]
+                    one_hot_action = torch.zeros(5)  # Assuming 5 possible actions
+                    one_hot_action[action] = 1.0
+                    print(f"One-hot action: {one_hot_action}")
 
-                    # Sample an action from the action probabilities
-
-                    # Optionally add Gaussian noise as an additional strategy
-                    #if np.random.rand() < 0.1:  # Exploration probability
-                    #    noise_action = np.random.randint(0, 5)  # Random action from the action space
-                    #    action = noise_action
             else:
                 action = None
 
             last_observation[agent] = observation
-            last_action[agent] = action
+            last_action[agent] = one_hot_action
 
             # Log the step data in a pd.df
             data_records.append({

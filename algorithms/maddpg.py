@@ -19,8 +19,12 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, action_size)
 
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
+    def forward(self, state):
+        # Ensure that both state and action are tensors
+        #state = torch.tensor(state, dtype=torch.float32)
+        #action = torch.tensor(action, dtype=torch.long)
+        #x = torch.cat([state], dim=1)  # Concatenate state and action
+        x = torch.relu(self.fc1(state))
         x = torch.relu(self.fc2(x))
         return torch.softmax(self.fc3(x), dim=-1)  # Discrete action space
 
@@ -32,9 +36,14 @@ class Critic(nn.Module):
         self.fc2 = nn.Linear(hidden_size, 32)
         self.fc3 = nn.Linear(32, action_size)
 
-    def forward(self, state_action):
+    def forward(self, state, action):
+        # Ensure that both state and action are 2D tensors with batch size as the first dimension
+        if len(state.shape) == 1:
+            state = state.unsqueeze(0)
+        if len(action.shape) == 1:
+            action = action.unsqueeze(0)
         #x = torch.cat([state, action], dim=1)  # Concatenate state and action
-        x = torch.cat([state_action], dim=1)  # Concatenate state and action
+        x = torch.cat([state, action], dim=1)  # Concatenate state and action
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
         return self.fc3(x)
@@ -154,7 +163,7 @@ class MADDPGAgent:
         #print(type(next_actions))
         # Collect next actions from all other agents
         other_next_actions = [agents[agent_key].target_actor(next_states) for agent_key in agents if agent_key != self.agent_id]
-        print(f"Other next actions shape before readjusting: {[action.shape for action in other_next_actions]}")
+        print(f"Other next actions shape before stack: {[action.shape for action in other_next_actions]}")
         print(type(other_next_actions))
         if len(other_next_actions) > 0:
             #other_next_actions_tensor = torch.cat(other_next_actions, dim=1)  # Concatenate actions from other agents
@@ -163,7 +172,6 @@ class MADDPGAgent:
             raise ValueError("No other actions were gathered.")
         # Print for debugging
         print(f"Other next actions shape after stack: {other_next_actions_tensor.shape}")
-        #print(f"Other next actions shape after readjusting: {[action.shape for action in other_next_actions_tensor]}")
         print(type(other_next_actions_tensor))
         # Ensure all actions are tensors
         assert all(isinstance(action, torch.Tensor) for action in other_next_actions), "All actions should be tensors"
@@ -175,41 +183,23 @@ class MADDPGAgent:
         # Create state-action pairs for the target critic (combine next states with all agents' next actions)
         #next_state_action = torch.cat([next_states, all_next_actions],dim=1)  # Should be [batch_size, total_state_action_size]
 
-        #print(next_state_action)
         print(next_state_action.shape)
         print(next_actions.shape)
         print(next_states.shape)
         # Calculate target Q-values
-        target_q = rewards + self.gamma * self.target_critic(next_state_action)
-        #target_q = rewards + (1 - dones.to(torch.float32)) * self.gamma * self.target_critic(next_state_action)
-
-        # Calculate target Q-values
-        #target_q = rewards + (1 - dones.to(torch.float32)) * self.gamma * self.target_critic(next_states, next_actions)
-        #target_q = rewards + (1 - dones.to(torch.float32)) * self.gamma * self.target_critic(next_state_action)
-
-        print(f"target_q shape: {target_q.shape}")
-
-        # Ensure states and actions are the right shapes
-        #states = states.view(batch_size, self.action_size) if states.dim() == 1 else actions
-        states = states.view(batch_size, self.state_size)  # Shape: [batch_size, state_size]
-        print(f"Actions shape before unsqueezing: {actions.shape}")
-        actions = actions.unsqueeze(1)
-        print(f"Actions shape after unsqueezing: {actions.shape}")
-        #actions = actions.view(batch_size, self.action_size)
-        print(f"Actions shape after reshaping to batch_size x action_size: {actions.shape}")
-        #actions = actions.view(-1, 1)
+        print(rewards.shape)
+        print(dones.shape)
+        rewards = rewards.unsqueeze(1)
+        dones = dones.unsqueeze(1)
+        print(rewards.shape)
+        print(dones.shape)
+        target_q = rewards + (1 - dones.to(torch.float32)) * self.gamma * self.target_critic(next_states, next_actions)
 
         # Concatenate states, actions, and other actions
-        current_state_action = torch.cat([states, actions], dim=1)
-
-        #current_state_action = torch.cat([states, actions, other_actions_tensor], dim=1)
-
-        #print(f"State Size: {self.state_size}, Action Size: {self.action_size}, Other Actions Size: {other_actions_tensor.shape[1]}")
-        #print(f"Current State Action Shape: {current_state_action.shape}")
+        #current_state_action = torch.cat([states, actions], dim=1)
 
         print(f"States shape: {states.shape}")
-
-        actions = actions.view(batch_size, self.action_size)
+        print(f"Actions shape: {actions.shape}")
 
         #current_q = self.critic(current_states_actions)
         current_q = self.critic(states, actions)
@@ -222,9 +212,11 @@ class MADDPGAgent:
 
         # Update actor
         predicted_actions = self.actor(states)
-        actor_state_action = torch.cat([states, predicted_actions] + [agents[agent_key].actor(states) for agent_key in agents if agent_key != other_agent_id], dim=1)
-        assert actor_state_action.shape[1] == (self.state_size + self.action_size + other_agent.action_size), "Mismatch in actor_state_action shape"
-        actor_loss = -self.critic(actor_state_action).mean()
+        print(f"Predicted actions shape: {predicted_actions.shape}")
+        #actor_state_action = torch.cat([states, predicted_actions] + [agents[agent_key].actor(states) for agent_key in agents if agent_key != other_agent_id], dim=1)
+
+        #actor_loss = -self.critic(actor_state_action).mean()
+        actor_loss = -self.critic(states, predicted_actions).mean()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -235,10 +227,6 @@ class MADDPGAgent:
         self._soft_update(self.actor, self.target_actor, self.tau)
 
     def remember(self, state, action, reward, next_state, done: bool):
-        # Ensure action is a numpy array with the proper shape
-        #print(f"Action before reshaping: {action}")
-        #action = np.array(action).reshape(1, -1)
-        #print(f"Action after reshaping: {action.shape}")
         # Store experience in replay buffer
         self.memory.append((state, action, reward, next_state, done))
 
