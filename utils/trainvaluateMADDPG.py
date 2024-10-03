@@ -48,7 +48,7 @@ def train(agents, num_episodes):
                     # print(f"Observation tensor: {obs_tensor}")          # Debugging
                     # print(f"Last action tensor: {last_action_tensor}")  # Debugging
                     action_probs = agents[agent].actor(obs_tensor).detach()
-                    # Apply softmax to convert logits to probabilities, add exploration noise - divide by tau
+                    # Apply softmax to convert logits to probabilities, add exploration noise - divide action_probs by tau before converting
                     action_probs = torch.softmax(action_probs/tau, -1)
                     # print(f"Action probs: {action_probs}")
 
