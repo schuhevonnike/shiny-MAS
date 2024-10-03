@@ -89,7 +89,7 @@ def train(agents, num_episodes, seed):
             os.makedirs('data_exportDQN')
 
         df_eval.to_csv(f'data_exportDQN/training_data_{seed}.csv', index=False)
-        print(f"\nTraining data saved to data_exportDQN/training_data.csv")
+        print(f"\nTraining data saved to data_exportDQN/training_data_{seed}.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
@@ -174,7 +174,7 @@ def evaluate(agents, num_episodes, seed):
             os.makedirs('data_exportDQN')
 
         df_eval.to_csv(f'data_exportDQN/evaluation_data_{seed}.csv', index=False)
-        print(f"\nEvaluation data saved to data_exportDQN/training_data.csv")
+        print(f"\nEvaluation data saved to data_exportDQN/evaluation_data_{seed}.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards

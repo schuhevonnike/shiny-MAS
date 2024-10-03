@@ -107,7 +107,7 @@ def train(agents, num_episodes, seed):
             os.makedirs('data_exportMADDPG')
 
         df_eval.to_csv(f'data_exportMADDPG/training_data_{seed}.csv', index=False)
-        print(f"\nTraining data saved to data_exportMADDPG/training_data.csv")
+        print(f"\nTraining data saved to data_exportMADDPG/training_data_{seed}.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
@@ -210,7 +210,7 @@ def evaluate(agents, num_episodes, seed):
             os.makedirs('data_exportMADDPG')
 
         df_eval.to_csv(f'data_exportMADDPG/evaluation_data_{seed}.csv', index=False)
-        print(f"\nEvaluation data saved to data_exportMADDPG/training_data.csv")
+        print(f"\nEvaluation data saved to data_exportMADDPG/evaluation_data_{seed}.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     #avg_rewards = {agent: np.mean(rewards) for agent, rewards in rewards_history.items()}
