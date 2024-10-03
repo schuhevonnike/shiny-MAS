@@ -4,13 +4,13 @@ import pandas as pd
 import torch
 from utils.pettingzoo_env import make_env
 
-def train(agents, num_episodes):
+def train(agents, num_episodes, seed):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
 
     for episode in range(num_episodes):
-        env.reset()
+        env.reset(seed=seed)
         #env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
@@ -106,7 +106,7 @@ def train(agents, num_episodes):
         if not os.path.exists('data_exportMADDPG'):
             os.makedirs('data_exportMADDPG')
 
-        df_eval.to_csv('data_exportMADDPG/training_data.csv', index=False)
+        df_eval.to_csv(f'data_exportMADDPG/training_data_{seed}.csv', index=False)
         print(f"\nTraining data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
@@ -114,13 +114,13 @@ def train(agents, num_episodes):
     # print(f"Type of avg_rewards in train: {type(avg_rewards)}") # Debugging
     return avg_rewards
 
-def evaluate(agents, num_episodes):
+def evaluate(agents, num_episodes, seed):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
 
     for episode in range(num_episodes):
-        env.reset()
+        env.reset(seed=seed)
         #env.reset(seed=42)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
@@ -209,7 +209,7 @@ def evaluate(agents, num_episodes):
         if not os.path.exists('data_exportMADDPG'):
             os.makedirs('data_exportMADDPG')
 
-        df_eval.to_csv('data_exportMADDPG/evaluation_data.csv', index=False)
+        df_eval.to_csv(f'data_exportMADDPG/evaluation_data_{seed}.csv', index=False)
         print(f"\nEvaluation data saved to data_exportMADDPG/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}

@@ -5,14 +5,14 @@ import pandas as pd
 import torch
 from utils.pettingzoo_env import make_env
 
-def train(agents, num_episodes):
+def train(agents, num_episodes, seed):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
 
     for episode in range(num_episodes):
         #env.reset()
-        env.reset(seed=42)
+        env.reset(seed=seed)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
         done = {agent: False for agent in env.possible_agents}
@@ -88,20 +88,20 @@ def train(agents, num_episodes):
         if not os.path.exists('data_exportDQN'):
             os.makedirs('data_exportDQN')
 
-        df_eval.to_csv('data_exportDQN/training_data.csv', index=False)
+        df_eval.to_csv(f'data_exportDQN/training_data_{seed}.csv', index=False)
         print(f"\nTraining data saved to data_exportDQN/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
     return avg_rewards
 
-def evaluate(agents, num_episodes):
+def evaluate(agents, num_episodes, seed):
     env = make_env()
     rewards_history = {agent: [] for agent in agents}
     data_records = []
 
     for episode in range(num_episodes):
         #env.reset()
-        env.reset(seed=42)
+        env.reset(seed=seed)
         total_rewards = {agent: 0 for agent in env.possible_agents}
         # Initialize done flag for tracking done state for each agent.
         done = {agent: False for agent in env.possible_agents}
@@ -173,7 +173,7 @@ def evaluate(agents, num_episodes):
         if not os.path.exists('data_exportDQN'):
             os.makedirs('data_exportDQN')
 
-        df_eval.to_csv('data_exportDQN/evaluation_data.csv', index=False)
+        df_eval.to_csv(f'data_exportDQN/evaluation_data_{seed}.csv', index=False)
         print(f"\nEvaluation data saved to data_exportDQN/training_data.csv")
 
     avg_rewards = {agent: sum(rewards) / len(rewards) for agent, rewards in rewards_history.items()}
