@@ -24,9 +24,17 @@ shiny-MAS-main/
 │   └── inspectionProfiles/
 │       └── profiles_settings.xml
 │
-├── algorithms/                  # Implementation of online-sourced DRL algorithms (version 01, via PyTorch)
-│   ├── dqn.py                   # Deep Q-Network
+├── algorithms/                  # Implementation of DRL algorithms
+│   ├── dqn.py                   # Deep Q-learning Network
 │   ├── maddpg.py                # Multi-Agent Deep Deterministic Policy Gradient
+│
+├── data_exportDQN/              # Folder for all DQN data
+│   ├── training_data_{}.csv     # Training data indexed by seed
+│   ├── evaluation_data_{}.csv   # Evaluation data indexed by seed
+│
+├── data_exportMADDPG/           # Folder for all MADDPG data
+│   ├── training_data_{}.csv     # Training data indexed by seed
+│   ├── evaluation_data_{}.csv   # Evaluation data indexed by seed
 │
 └── utils/                       # Utility scripts for environment creation as well as training and evaluation
     ├── reformatting.py          # Ensures proper formatting of output data
