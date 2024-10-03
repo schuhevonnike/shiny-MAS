@@ -1,6 +1,7 @@
 import multiprocessing
 import torch
-
+from mainMADDPG import start_seed as MADDPG_start_seed
+from mainDQN import start_seed as DQN_start_seed
 # Function to check if a GPU with CUDA is available
 def is_cuda_available():
     return torch.cuda.is_available()
@@ -24,11 +25,9 @@ def run_experiment_with_cuda_support(algorithm_name, seed):
         print(f"Running {algorithm_name} with seed {seed} on CPU")
 
     # Assuming train() and evaluate() use torch and can work with the device
-    output_file = f"results_{algorithm_name}_seed_{seed}.csv"
 
-    # train and evaluate functions will take the device as an argument
-    train(seed=seed, output_file=output_file, device=device)
-    evaluate(seed=seed, output_file=output_file, device=device)
+
+
 
 # Example usage
 if __name__ == "__main__":

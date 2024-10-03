@@ -18,14 +18,14 @@ def initialize_agents(env):
         agents[agent_id] = MADDPGAgent(agent_id, state_size, action_size)
     return agents
 
-def run_experiment(env_fn, num_episodes):
+def run_experiment(env_fn, num_episodes, seed):
     env = env_fn()
     # Initializing agents:
     print("\nInitializing Individual Agents...")
     cooperative_agents = initialize_agents(env)
     # Training agents:
     print("\nTraining Individual Agents:")
-    avg_training_rewards = train(cooperative_agents, num_episodes=num_episodes)
+    avg_training_rewards = train(cooperative_agents, num_episodes=num_episodes, seed=seed)
     print(f"Type of avg_training_rewards in run_experiment: {type(avg_training_rewards)}") # Debugging
     # Print average individual agent training results:
     print("\nAverage Training Rewards for Individual Agents:")
@@ -33,15 +33,15 @@ def run_experiment(env_fn, num_episodes):
         print(f"{agent}: {reward:.2f}")
     # Evaluate agents:
     print("\nEvaluating Individual Agents:")
-    avg_evaluation_rewards = evaluate(cooperative_agents, num_episodes=num_episodes)
+    avg_evaluation_rewards = evaluate(cooperative_agents, num_episodes=num_episodes, seed=seed)
     # Print average individual agent evaluation results:
     print("\nAverage Evaluation Rewards for Individual Agents:")
     for agent, reward in avg_evaluation_rewards.items():
         print(f"{agent}: {reward:.2f}")
     env.close()
 
-if __name__ == "__main__":
+def start_seed(seed):
     parser = argparse.ArgumentParser(description="Multi-Agent Reinforcement Learning Comparison, to run in terminal print: py mainMADDPG.py (--num_episodes)")
     parser.add_argument('--num_episodes', type=int, default=12400, help='Number of episodes for training each group of agents')
     args = parser.parse_args()
-    run_experiment(env_fn=make_env, num_episodes=args.num_episodes)
+    run_experiment(env_fn=make_env, num_episodes=args.num_episodes, seed=seed)

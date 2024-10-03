@@ -19,18 +19,18 @@ class DQN(nn.Module):
 
 # learning_rate == Beta (ß) is a hyperparameter
 class DQNAgent:
-    def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
-                 epsilon_decay=0.9999, min_epsilon=0.01, target_update_freq=1000):
+    def __init__(self, state_size, action_size, device, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
+                     epsilon_decay=0.9999, min_epsilon=0.01, target_update_freq=1000):
         self.input_dim = state_size
         self.action_size = action_size
-
+        self.device = device
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.min_epsilon = min_epsilon
         self.memory = deque(maxlen=10000)
-        self.model = DQN(state_size, action_size)
-        self.target_model = DQN(state_size, action_size)
+        self.model = DQN(state_size, action_size).to(self.device)
+        self.target_model = DQN(state_size, action_size).to(self.device)
         self.update_steps = 0
         self.target_update_freq = target_update_freq
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -58,11 +58,12 @@ class DQNAgent:
 
         minibatch = random.sample(self.memory, batch_size)
 
-        states = torch.tensor(np.array([t[0] for t in minibatch]), dtype=torch.float32)
-        actions = torch.tensor(np.array([t[1] for t in minibatch]), dtype=torch.long)
-        rewards = torch.tensor(np.array([t[2] for t in minibatch]), dtype=torch.float32)
-        next_states = torch.tensor(np.array([t[3] for t in minibatch]), dtype=torch.float32)
-        dones = torch.tensor(np.array([t[4] for t in minibatch]), dtype=torch.bool)
+        # Konvertieren der Batch-Daten in Tensoren und auf das Gerät verschieben
+        states = torch.stack([t[0] for t in minibatch]).to(self.device)
+        actions = torch.tensor([t[1] for t in minibatch], dtype=torch.long).to(self.device)
+        rewards = torch.tensor([t[2] for t in minibatch], dtype=torch.float32).to(self.device)
+        next_states = torch.stack([t[3] for t in minibatch]).to(self.device)
+        dones = torch.tensor([t[4] for t in minibatch], dtype=torch.float32).to(self.device)
 
         # Compute Q(s_t, a)
         state_action_values = self.model(states).gather(1, actions.unsqueeze(1))
@@ -71,13 +72,11 @@ class DQNAgent:
             # Use target network for next state value estimation
             next_state_values = self.target_model(next_states).max(1)[0]
             # Set next_state_values to zero where done is True
-            next_state_values[dones] = 0.0
+            next_state_values = next_state_values * (1 - dones)
             expected_state_action_values = rewards + (self.gamma * next_state_values)
 
         # Loss calculation
         loss = self.criterion(state_action_values.squeeze(), expected_state_action_values)
-        # print(loss, state_action_values.mean(), expected_state_action_values.mean())
-        #loss = self.criterion(output, target)
 
         # Optimization step
         self.optimizer.zero_grad()
@@ -85,15 +84,14 @@ class DQNAgent:
         self.optimizer.step()
 
         # Update epsilon
-        #if self.epsilon > self.min_epsilon:
-        #    self.epsilon *= self.epsilon_decay
         self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
-        #print(self.epsilon)
+
         # Update the target network
         self.update_steps += 1
         if self.update_steps % self.target_update_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
 
+
     def remember(self, state, action, reward, next_state, done: bool):
-        self.memory.append((state, action, reward, next_state, done))
+        self.memory.append((state.cpu(), action, reward, next_state.cpu(), done))
 
