@@ -39,7 +39,7 @@ class Critic(nn.Module):
 
 
 class MADDPGAgent:
-    def __init__(self, agent_id, state_size, action_size, actor_lr=1e-3, critic_lr=1e-3, gamma=0.9999, tau = 1.0, tau_decay = 0.9999, tau_min=0.01): # Tau for soft updating the network
+    def __init__(self, agent_id, state_size, action_size, actor_lr=1e-3, critic_lr=1e-3, gamma=0.999, tau = 1.0, tau_decay = 0.9999, tau_min=0.01): # Tau for soft updating the network
         self.agent_id = agent_id
         self.state_size = state_size
         self.action_size = action_size
@@ -82,7 +82,7 @@ class MADDPGAgent:
         # print(f"Next actions shape after concatenating: {next_actions.shape}")
 
         # Collect next actions from all other agents
-        other_next_actions = [agents[agent_key].target_actor(next_states) for agent_key in agents if agent_key != self.agent_id]
+        #other_next_actions = [agents[agent_key].target_actor(next_states) for agent_key in agents if agent_key != self.agent_id]
 
         # Calculate target Q-values
         rewards = rewards.unsqueeze(1)

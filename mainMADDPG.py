@@ -1,10 +1,20 @@
+import os
+
 import torch
 import argparse
 from algorithms.maddpg import MADDPGAgent
 from utils.trainvaluateMADDPG import train, evaluate
 from utils.pettingzoo_env import make_env
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+NUM_THREADS = 1
+os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
+os.environ["OPENBLAS_NUM_THREADS"] = str(NUM_THREADS)
+os.environ["MKL_NUM_THREADS"] = str(NUM_THREADS)
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(NUM_THREADS)
+os.environ["NUMEXPR_NUM_THREADS"] = str(NUM_THREADS)
+torch.set_num_threads(NUM_THREADS)
+
+#device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def initialize_agents(env):
     if hasattr(env, 'unwrapped'):
@@ -45,3 +55,10 @@ def start_seed(seed):
     parser.add_argument('--num_episodes', type=int, default=12400, help='Number of episodes for training each group of agents')
     args = parser.parse_args()
     run_experiment(env_fn=make_env, num_episodes=args.num_episodes, seed=seed)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_episodes', type=int, default=12400, help='Number of episodes for training each group of agents')
+    parser.add_argument("--seed", type=int, default=0, help="Random seed")
+    args = parser.parse_args()
+    run_experiment(env_fn=make_env, num_episodes=args.num_episodes, seed=args.seed)
