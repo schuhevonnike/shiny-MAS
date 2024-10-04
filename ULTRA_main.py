@@ -12,7 +12,8 @@ def run_algorithm(args):
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
 if __name__ == "__main__":
-    seeds = [i for i in range(12)]
+    #seeds = [i for i in range(12)]
+    seeds = [42, 1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31]
     tasks = []
 
     # Create tasks for both algorithms with each seed

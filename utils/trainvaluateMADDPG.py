@@ -139,15 +139,15 @@ def evaluate(agents, num_episodes, seed):
             total_rewards[agent] += reward
 
             # If it's not the first turn for the agent, store the transition
-            if last_observation[agent] is not None and last_action[agent] is not None:
-                agents[agent].remember(
-                    state=last_observation[agent].copy(),
+            #if last_observation[agent] is not None and last_action[agent] is not None:
+            #    agents[agent].remember(
+            #        state=last_observation[agent].copy(),
                     #state=last_observation[agent],
-                    action=last_action[agent],
-                    reward=reward,
-                    next_state=observation.copy(),
-                    done=current_done
-                )
+            #        action=last_action[agent],
+            #        reward=reward,
+            #        next_state=observation.copy(),
+            #        done=current_done
+            #    )
 
             # Select action
             if not current_done:
@@ -187,11 +187,11 @@ def evaluate(agents, num_episodes, seed):
             env.step(action)
 
         # Update agents
-        for agent_id in agents:
-            if len(agents[agent_id].memory) >= 256:
-                for other_agent_id in agents:
-                    if other_agent_id != agent_id:  # Ensure we are updating with another agent
-                        agents[agent_id].update(other_agent_id, agents)
+        #for agent_id in agents:
+        #    if len(agents[agent_id].memory) >= 256:
+        #        for other_agent_id in agents:
+        #            if other_agent_id != agent_id:  # Ensure we are updating with another agent
+        #                agents[agent_id].update(other_agent_id, agents)
 
         # Logging rewards at the end of each episode - modified 26.09.24
         for agent in total_rewards:
