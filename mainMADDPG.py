@@ -58,7 +58,7 @@ def start_seed(seed):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_episodes', type=int, default=12400, help='Number of episodes for training each group of agents')
+    parser.add_argument('--num_episodes', type=int, default=1000, help='Number of episodes for training each group of agents')
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     args = parser.parse_args()
     run_experiment(env_fn=make_env, num_episodes=args.num_episodes, seed=args.seed)

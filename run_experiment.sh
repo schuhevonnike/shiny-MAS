@@ -6,8 +6,8 @@
 #SBATCH --ntasks-per-node=1
 
 #SBATCH -t 24:00:00
-#SBATCH --mem=15000
-#SBATCH -C EPYC_7262
+#SBATCH --mem=8000
+#SBATCH -C XEON_SP_6126
 
 set -e
 echo "$@"
