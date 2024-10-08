@@ -1,10 +1,8 @@
 import subprocess
-from random import randint
 
 
 def main():
-    for i in range(10):
-        seed = randint(1, 10000)
+    for seed in [222,351,398,453,545,580,752,827,841,983]:
         subprocess.run(["sbatch", "run_experiment.sh", "mainDQN.py", "--seed", str(seed)])
         subprocess.run(["sbatch", "run_experiment.sh", "mainMADDPG.py", "--seed", str(seed)])
 
