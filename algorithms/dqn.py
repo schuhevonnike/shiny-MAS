@@ -20,7 +20,7 @@ class DQN(nn.Module):
 # learning_rate == Beta (ß) is a hyperparameter
 class DQNAgent:
     def __init__(self, state_size, action_size, learning_rate=1e-3, gamma=0.99, epsilon=1.0,
-                 epsilon_decay=0.9999, min_epsilon=0.01, target_update_freq=1000):
+                 epsilon_decay=0.995, min_epsilon=0.01, target_update_freq=1000):
         self.input_dim = state_size
         self.action_size = action_size
 
